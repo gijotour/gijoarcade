@@ -1,0 +1,3015 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GIJO Arcade</title>
+    <!-- 파티 게임(gijo-drink.html)과 같은 이유로 폰트를 렌더링 차단 없이 받습니다.
+         현지 데이터가 느려 폰트 요청이 걸려도 게임은 그대로 실행돼야 합니다. -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap"
+          onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap"></noscript>
+    <style>
+:root {
+    --bg-color: #0a0a0c;
+    --primary-neon: #ff0055;
+    --secondary-neon: #00f3ff;
+    --tertiary-neon: #a200ff;
+    --lime-neon: #c4ff4d;
+    --amber-neon: #ffaa00;
+    --text-color: #ffffff;
+    --font-main: 'Outfit', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    overscroll-behavior: none;
+}
+
+#app {
+    width: 100%;
+    height: 100dvh;
+    position: relative;
+}
+
+.screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.25s ease;
+}
+
+.screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.screen.active {
+    opacity: 1;
+    z-index: 1;
+}
+
+/* ===== 메뉴 ===== */
+.menu-header {
+    padding: clamp(16px, 5vw, 28px) 20px clamp(8px, 3vw, 16px);
+    text-align: center;
+    flex-shrink: 0;
+    padding-top: calc(clamp(16px, 5vw, 28px) + env(safe-area-inset-top));
+}
+
+.menu-title {
+    font-size: clamp(1.7rem, 8vw, 2.6rem);
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    color: #fff;
+    text-shadow: 0 0 20px var(--secondary-neon);
+}
+
+.menu-sub {
+    margin-top: 6px;
+    font-size: clamp(0.72rem, 3vw, 0.88rem);
+    color: #8b8b95;
+    word-break: keep-all;
+}
+
+.tile-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 슬롯이 대표 칸(가로 전체)이고, 그 아래 기존 4개가 2x2 로 들어갑니다. */
+    grid-template-rows: 0.85fr 1fr 1fr;
+    gap: 8px;
+    padding: 0 8px calc(16px + env(safe-area-inset-bottom));
+    min-height: 0;
+}
+
+/* 슬롯 대표 칸 — 가로로 눕혀 배너처럼 */
+.tile-slots {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+}
+.tile-slots::before {
+    clip-path: none;
+    background: linear-gradient(90deg, #b8860b, #ffd700 45%, #ff2d78);
+}
+.tile-slots .tile-icon { font-size: clamp(2rem, 8vw, 2.8rem); }
+.tile-slots .tile-text { display: flex; flex-direction: column; gap: 1px; }
+.tile-slots .tile-en { font-size: clamp(0.95rem, 4vw, 1.2rem); }
+body.hot .tile-slots::before {
+    background: linear-gradient(90deg, #7c1d4f, #ff2d78 45%, #ffd700);
+}
+
+.tile {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    outline: none;
+    cursor: pointer;
+    border-radius: 14px;
+    background: rgba(16, 16, 24, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 2px;
+    padding: clamp(12px, 4vw, 18px);
+    text-align: left;
+    font-family: var(--font-main);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.tile:hover, .tile:focus-visible {
+    border-color: rgba(0, 243, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+}
+
+.tile:active { transform: scale(0.96); }
+
+.tile-badge {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    font-size: clamp(0.58rem, 2.1vw, 0.68rem);
+    font-weight: 800;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    margin-bottom: 2px;
+    letter-spacing: 0.02em;
+}
+
+.tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(0 100%, 100% 100%, 100% 14%, 0 50%);
+}
+
+.tile > * { position: relative; z-index: 1; }
+
+.tile-icon {
+    font-size: clamp(1.7rem, 7vw, 2.4rem);
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+
+.tile-en {
+    font-size: clamp(0.85rem, 3.4vw, 1.05rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+}
+
+.tile-kr {
+    font-size: clamp(0.68rem, 2.7vw, 0.8rem);
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.tile-best {
+    margin-top: 3px;
+    font-size: clamp(0.6rem, 2.4vw, 0.7rem);
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.02em;
+}
+
+.tile-1::before { background: linear-gradient(120deg, var(--secondary-neon), #4d8cff); }
+.tile-2::before { background: linear-gradient(120deg, var(--primary-neon), #ff6b9d); }
+.tile-3::before { background: linear-gradient(120deg, #3ed973, var(--lime-neon)); }
+.tile-4::before { background: linear-gradient(120deg, var(--amber-neon), #ffe14d); }
+
+/* ===== 🔥 HOT 테마 — 심야 라운지 분위기 =====
+   기본 테마(사이언/라임/앰버)는 밝고 오락실 느낌입니다. HOT 을 켜면 자홍·보라
+   위주의 어두운 라운지 톤으로 바꿔, 파티 게임의 HOT 모드와 결이 맞게 합니다.
+   토큰만 갈아끼우므로 각 게임의 로직은 건드리지 않습니다. */
+body.hot {
+    --bg-color: #120610;
+    background-color: #120610;
+}
+
+body.hot .menu-title { text-shadow: 0 0 22px #ff2d78; }
+body.hot .menu-sub { color: #b98aa8; }
+
+body.hot .tile { background: #170a14; }
+body.hot .tile-1::before { background: linear-gradient(120deg, #ff2d78, #ff8fb1); }
+body.hot .tile-2::before { background: linear-gradient(120deg, #d926a9, #ff6bcb); }
+body.hot .tile-3::before { background: linear-gradient(120deg, #a020f0, #e879f9); }
+body.hot .tile-4::before { background: linear-gradient(120deg, #ff4d6d, #ffa07a); }
+
+body.hot canvas { background: #0e0410; }
+body.hot .btn-back { color: #ff8fb1; }
+body.hot .overlay { background: rgba(14, 4, 14, 0.88); }
+body.hot .ov-score { color: #ff6bcb !important; }
+body.hot .ov-btn {
+    background: linear-gradient(120deg, #ff2d78, #c026d3) !important;
+    box-shadow: 0 4px 20px rgba(255, 45, 120, 0.5) !important;
+}
+
+/* 게임 오버·신기록에 뜨는 도발 멘트 */
+.ov-taunt {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #ff8fb1;
+    word-break: keep-all;
+    max-width: 28ch;
+    line-height: 1.5;
+}
+
+.ov-taunt .i18n-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+}
+
+/* ===== 클리어 보상 카드 =====
+   판을 깨거나 구간을 넘길 때 잠깐 떴다 사라집니다. 게임을 멈추지 않도록
+   pointer-events 를 꺼두고, 애니메이션이 끝나면 스스로 제거됩니다. */
+.reward-card {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 18px 28px;
+    border-radius: 20px;
+    background: rgba(20, 4, 18, 0.92);
+    border: 1px solid rgba(255, 45, 120, 0.55);
+    box-shadow: 0 0 44px rgba(255, 45, 120, 0.45);
+    z-index: 6;
+    pointer-events: none;
+    text-align: center;
+    animation: reward-pop 0.36s cubic-bezier(.34,1.56,.64,1),
+               reward-out 0.45s ease 1.5s forwards;
+}
+
+@keyframes reward-pop {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes reward-out {
+    to { transform: translate(-50%, -80%) scale(0.95); opacity: 0; }
+}
+
+.reward-icon {
+    font-size: clamp(2.6rem, 12vw, 3.4rem);
+    line-height: 1;
+    filter: drop-shadow(0 0 20px rgba(255, 45, 120, 0.85));
+}
+
+.reward-kr {
+    font-size: clamp(0.95rem, 4vw, 1.1rem);
+    font-weight: 900;
+    color: #fff;
+    word-break: keep-all;
+}
+
+.reward-en {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ===== HOT 토글 스위치 (메뉴) ===== */
+.hot-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.hot-toggle-label {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #8b8b95;
+    letter-spacing: 0.02em;
+}
+
+body.hot .hot-toggle-label { color: #ff8fb1; }
+
+.hot-sw {
+    width: 46px;
+    height: 26px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.hot-sw span {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.hot-sw.on {
+    background: linear-gradient(120deg, #ff2d78, #c026d3);
+    box-shadow: 0 0 14px rgba(255, 45, 120, 0.55);
+}
+
+.hot-sw.on span { transform: translateX(20px); }
+
+
+/* ============================================================
+   GIJO Slots — 5릴 3행 슬롯머신
+
+   가상 크레딧 전용입니다. 결제도, 현금 환전도, 외부 통신도 없습니다.
+   크레딧이 떨어지면 무료로 충전 버튼이 나옵니다.
+   ============================================================ */
+.slots-screen { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+
+.slots-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 10px 10px;
+    min-height: 0;
+}
+
+/* 릴 창 — 5열 3행이라 세로로 늘려두면 칸이 길쭉해져 슬롯머신처럼 안 보입니다.
+   비율을 고정해 칸이 거의 정사각형이 되게 합니다. */
+.reels-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 5 / 3.2;
+    max-height: 100%;
+    flex: 0 1 auto;
+    min-height: 0;
+    border-radius: 16px;
+    padding: 8px;
+    background: linear-gradient(160deg, #1a1206, #0b0a12);
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 26px rgba(255, 215, 0, 0.3), inset 0 0 30px rgba(0,0,0,0.7);
+    overflow: hidden;
+}
+
+body.hot .reels-frame {
+    border-color: #ff2d78;
+    box-shadow: 0 0 30px rgba(255, 45, 120, 0.42), inset 0 0 30px rgba(0,0,0,0.7);
+    background: linear-gradient(160deg, #200a1a, #0d0410);
+}
+
+.reels {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    height: 100%;
+}
+
+.reel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+/* 릴 안에서 위아래로 흐르는 심볼 띠 */
+.reel-strip {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+}
+
+.sym {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-size: clamp(1.7rem, 8.5vw, 2.6rem);
+    line-height: 1;
+    user-select: none;
+}
+
+.reel.spinning .reel-strip { filter: blur(2px); }
+
+/* 당첨된 심볼만 튀어오르게 */
+.sym.win {
+    animation: sym-win 0.55s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 12px #ffd700);
+}
+
+@keyframes sym-win {
+    from { transform: scale(1); }
+    to   { transform: scale(1.22); }
+}
+
+/* 페이라인 표시 */
+.payline-layer {
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.payline-layer svg { width: 100%; height: 100%; overflow: visible; }
+
+.payline-path {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px currentColor);
+    opacity: 0;
+    animation: line-in 0.3s ease forwards;
+}
+
+@keyframes line-in { to { opacity: 0.95; } }
+
+/* 배당표 — 위쪽 빈 공간을 채우면서, 뭐가 얼마인지 알려줍니다.
+   SYMBOLS 배열에서 만들어내므로 배당을 고치면 여기도 같이 바뀝니다. */
+.paytable {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.pt-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 10px;
+}
+
+.pt-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #d8d8e0;
+    font-variant-numeric: tabular-nums;
+}
+
+.pt-chip b { color: #ffd700; font-weight: 900; }
+body.hot .pt-chip b { color: #ff8fb1; }
+
+.pt-sym { font-size: 1rem; line-height: 1; }
+
+.pt-note {
+    font-size: 0.63rem;
+    font-weight: 600;
+    color: #7a7a85;
+    text-align: center;
+    word-break: keep-all;
+    line-height: 1.5;
+}
+
+
+/* ===== 🌶️ 스파이시 보너스 인트로 =====
+   💋🔥🍸 를 흩뿌리면서 크게 열어줍니다. 게임을 막지 않도록 pointer-events 는 꺼둡니다. */
+.bonus-intro {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255,45,120,0.45), rgba(10,0,8,0.94) 72%);
+    animation: bi-in 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes bi-in {
+    0% { opacity: 0; transform: scale(0.7); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.bi-confetti-layer { position: absolute; inset: 0; }
+
+.bi-confetti {
+    position: absolute;
+    top: -14%;
+    font-size: clamp(1.1rem, 5vw, 1.7rem);
+    animation: bi-fall 2.4s linear infinite;
+    opacity: 0.95;
+}
+
+@keyframes bi-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    12%  { opacity: 1; }
+    100% { transform: translateY(340px) rotate(220deg); opacity: 0; }
+}
+
+.bi-core {
+    position: relative;
+    text-align: center;
+    z-index: 1;
+}
+
+.bi-chilis {
+    font-size: clamp(1.7rem, 9vw, 2.6rem);
+    letter-spacing: 0.1em;
+    animation: bi-shake 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes bi-shake {
+    from { transform: rotate(-7deg) scale(1); }
+    to   { transform: rotate(7deg) scale(1.12); }
+}
+
+.bi-title {
+    font-size: clamp(1.6rem, 10vw, 2.6rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.03em;
+    text-shadow: 0 0 26px #ff2d78, 0 3px 0 rgba(0,0,0,0.55);
+}
+
+.bi-kr {
+    margin-top: 2px;
+    font-size: clamp(0.95rem, 4.4vw, 1.2rem);
+    font-weight: 900;
+    color: #ffd700;
+}
+
+.bi-sub {
+    margin-top: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.6;
+}
+
+/* 고정된 와일드 — 남은 스핀 내내 그 자리에 붙어 있다는 걸 보여줍니다. */
+.sym.sticky {
+    border-radius: 8px;
+    background: radial-gradient(circle, rgba(255,45,120,0.4), rgba(255,45,120,0.08) 70%);
+    box-shadow: inset 0 0 0 2px rgba(255,45,120,0.75);
+    filter: drop-shadow(0 0 10px #ff2d78);
+}
+
+/* 보너스 배지 안의 숫자 강조 */
+.free-badge b { color: #ffd700; font-weight: 900; }
+
+/* 조작부 */
+.slots-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.bet-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.bet-label {
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #7a7a85;
+    text-transform: uppercase;
+}
+
+.bet-val {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #ffd700;
+    min-width: 3ch;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.bet-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,215,0,0.6);
+    background: transparent;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 900;
+    cursor: pointer;
+    line-height: 1;
+    font-family: var(--font-main);
+}
+
+.bet-btn:active { transform: scale(0.9); }
+
+.spin-btn {
+    flex: 1;
+    padding: 15px 10px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    border-radius: 16px;
+    font-family: var(--font-main);
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #2a1a00;
+    background: linear-gradient(120deg, #ffd700, #ffb300);
+    box-shadow: 0 4px 18px rgba(255, 200, 0, 0.42);
+    text-shadow: none;
+}
+
+body.hot .spin-btn {
+    color: #fff;
+    background: linear-gradient(120deg, #ff2d78, #c026d3);
+    box-shadow: 0 4px 20px rgba(255, 45, 120, 0.5);
+}
+
+.spin-btn:active { transform: scale(0.97); }
+.spin-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+/* 결과 줄 */
+.slots-msg {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #ffd700;
+    min-height: 1.5rem;
+    flex-shrink: 0;
+    word-break: keep-all;
+}
+
+.slots-msg .i18n-sub {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    margin-top: 2px;
+}
+
+/* 큰 당첨 연출 */
+.bigwin {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: radial-gradient(circle, rgba(255,180,0,0.28), rgba(0,0,0,0.9) 72%);
+    pointer-events: none;
+    animation: bigwin-in 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+
+body.hot .bigwin {
+    background: radial-gradient(circle, rgba(255,45,120,0.32), rgba(0,0,0,0.9) 72%);
+}
+
+@keyframes bigwin-in {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.bigwin-title {
+    font-size: clamp(1.8rem, 11vw, 3rem);
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 22px #ffd700, 0 3px 0 rgba(0,0,0,0.5);
+    letter-spacing: 0.02em;
+}
+
+body.hot .bigwin-title { text-shadow: 0 0 22px #ff2d78, 0 3px 0 rgba(0,0,0,0.5); }
+
+.bigwin-amount {
+    font-size: clamp(1.3rem, 8vw, 2rem);
+    font-weight: 900;
+    color: #ffd700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bigwin-kr { font-size: 0.9rem; font-weight: 700; color: rgba(255,255,255,0.75); }
+
+/* 프리스핀 배지 */
+.free-badge {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #a020f0, #ff2d78);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 900;
+    box-shadow: 0 0 18px rgba(255, 45, 120, 0.6);
+    white-space: nowrap;
+}
+
+.free-badge.hidden { display: none; }
+
+/* ===== 게임 화면 공통 ===== */
+.game-screen {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.hud {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    flex-shrink: 0;
+}
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--secondary-neon);
+    font-family: var(--font-main);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 7px 13px;
+    border-radius: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.btn-back:active { transform: scale(0.95); }
+
+.hud-stats {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: clamp(10px, 4vw, 20px);
+    /* 점수가 늘어도 자리가 흔들리지 않게 합니다. */
+    font-variant-numeric: tabular-nums;
+}
+
+.stat {
+    text-align: right;
+    line-height: 1.15;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7a7a85;
+}
+
+.stat-val {
+    display: block;
+    font-size: clamp(1rem, 4.5vw, 1.3rem);
+    font-weight: 900;
+    color: #fff;
+}
+
+.canvas-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    margin: 0 10px 10px;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    /* 캔버스 위에서 스크롤·확대가 일어나면 조작이 안 됩니다. */
+    touch-action: none;
+    background: #08080b;
+}
+
+.hint {
+    text-align: center;
+    font-size: 0.72rem;
+    color: #6e6e78;
+    padding: 0 16px 10px;
+    flex-shrink: 0;
+    word-break: keep-all;
+}
+
+/* ===== 오버레이 (시작 / 게임 오버 / 일시정지) ===== */
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 20px;
+    text-align: center;
+    background: rgba(6, 6, 9, 0.86);
+    border-radius: 14px;
+    z-index: 5;
+}
+
+.overlay.hidden { display: none; }
+
+.ov-title {
+    font-size: clamp(1.5rem, 8vw, 2.2rem);
+    font-weight: 900;
+    color: #fff;
+}
+
+.ov-kr {
+    font-size: clamp(0.85rem, 3.6vw, 1rem);
+    font-weight: 700;
+    color: #b6b6c0;
+    word-break: keep-all;
+}
+
+.ov-score {
+    margin-top: 10px;
+    font-size: clamp(1.1rem, 5vw, 1.5rem);
+    font-weight: 900;
+    color: var(--secondary-neon);
+    font-variant-numeric: tabular-nums;
+}
+
+.ov-best {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #8b8b95;
+    font-variant-numeric: tabular-nums;
+}
+
+.ov-new {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: var(--amber-neon);
+    text-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
+    animation: pop 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.ov-btn {
+    margin-top: 16px;
+    font-family: var(--font-main);
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 13px 34px;
+    border-radius: 16px;
+    background: linear-gradient(120deg, var(--secondary-neon), #4d8cff);
+    box-shadow: 0 4px 18px rgba(0, 243, 255, 0.4);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.45);
+}
+
+.ov-btn:active { transform: scale(0.96); }
+
+.ov-hint {
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: #7a7a85;
+    line-height: 1.6;
+    word-break: keep-all;
+    max-width: 30ch;
+}
+
+/* 게임별 액센트 — 메뉴 타일 색을 게임 화면 안까지 그대로 잇습니다. */
+#scr-block .ov-btn { background: linear-gradient(120deg, var(--secondary-neon), #4d8cff); box-shadow: 0 4px 18px rgba(0,243,255,0.4); }
+#scr-shoot .ov-btn { background: linear-gradient(120deg, var(--primary-neon), #ff6b9d); box-shadow: 0 4px 18px rgba(255,0,85,0.4); }
+#scr-snake .ov-btn { background: linear-gradient(120deg, #3ed973, var(--lime-neon)); box-shadow: 0 4px 18px rgba(62,217,115,0.4); }
+#scr-brick .ov-btn { background: linear-gradient(120deg, var(--amber-neon), #ffe14d); box-shadow: 0 4px 18px rgba(255,170,0,0.4); }
+
+#scr-block .ov-score { color: var(--secondary-neon); }
+#scr-shoot .ov-score { color: var(--primary-neon); }
+#scr-snake .ov-score { color: var(--lime-neon); }
+#scr-brick .ov-score { color: var(--amber-neon); }
+
+.footer-note {
+    position: absolute;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: rgba(255,255,255,0.28);
+    font-size: 0.72rem;
+    pointer-events: none;
+}
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ===== 메뉴 ===== -->
+    <section id="scr-menu" class="screen active">
+        <div class="menu-header">
+            <h1 class="menu-title">GIJO Arcade</h1>
+            <p class="menu-sub" id="menu-sub">비행기·대기 시간용 오프라인 게임<br>Offline games for flights &amp; waiting</p>
+            <div class="hot-toggle">
+                <span class="hot-toggle-label">🔥 HOT 테마</span>
+                <button id="hot-sw" class="hot-sw" role="switch" aria-checked="false"
+                        aria-label="HOT 테마"><span></span></button>
+            </div>
+        </div>
+        <div class="tile-grid">
+            <button class="tile tile-slots" data-go="slots">
+                <span class="tile-icon">&#127920;</span>
+                <span class="tile-text">
+                    <span class="tile-badge">🎰 🔥 BEST · 1인용</span>
+                    <span class="tile-en">GIJO Slots</span>
+                    <span class="tile-kr">네온 슬롯머신</span>
+                    <span class="tile-best" data-best="slots">BEST 0</span>
+                </span>
+            </button>
+            <button class="tile tile-1" data-go="block">
+                <span class="tile-badge">1인용 · 스택</span>
+                <span class="tile-icon">&#129513;</span>
+                <span class="tile-en">Block Drop</span>
+                <span class="tile-kr">블록 쌓기</span>
+                <span class="tile-best" data-best="block">BEST 0</span>
+            </button>
+            <button class="tile tile-2" data-go="shoot">
+                <span class="tile-badge">1인용 · 슈팅</span>
+                <span class="tile-icon">&#128760;</span>
+                <span class="tile-en">Space Shooter</span>
+                <span class="tile-kr">비행기 슈팅</span>
+                <span class="tile-best" data-best="shoot">BEST 0</span>
+            </button>
+            <button class="tile tile-3" data-go="snake">
+                <span class="tile-badge">1인용 · 클래식</span>
+                <span class="tile-icon">&#128013;</span>
+                <span class="tile-en">Snake</span>
+                <span class="tile-kr">뱀 키우기</span>
+                <span class="tile-best" data-best="snake">BEST 0</span>
+            </button>
+            <button class="tile tile-4" data-go="brick">
+                <span class="tile-badge">1인용 · 벽돌깨기</span>
+                <span class="tile-icon">&#127934;</span>
+                <span class="tile-en">Brick Breaker</span>
+                <span class="tile-kr">벽돌 깨기</span>
+                <span class="tile-best" data-best="brick">BEST 0</span>
+            </button>
+        </div>
+        <div class="footer-note">&copy; GIJO Labs</div>
+    </section>
+
+
+    <!-- ===== 슬롯머신 ===== -->
+    <section id="scr-slots" class="screen hidden slots-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Credit</span><span class="stat-val" data-credit>1000</span></div>
+                <div class="stat"><span class="stat-label">Win</span><span class="stat-val" data-win>0</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+
+        <div class="slots-body">
+            <div class="paytable" id="paytable"></div>
+
+            <div class="reels-frame" id="reels-frame">
+                <div class="reels" id="reels"></div>
+                <div class="payline-layer" id="payline-layer"></div>
+                <div class="free-badge hidden" id="free-badge"></div>
+            </div>
+
+            <div class="slots-msg" id="slots-msg"></div>
+
+            <div class="slots-controls">
+                <div class="bet-box">
+                    <button class="bet-btn" id="bet-down" aria-label="배팅 줄이기">-</button>
+                    <div>
+                        <span class="bet-label">Bet</span>
+                        <span class="bet-val" id="bet-val">10</span>
+                    </div>
+                    <button class="bet-btn" id="bet-up" aria-label="배팅 늘리기">+</button>
+                </div>
+                <button class="spin-btn" id="spin-btn">SPIN · 돌리기</button>
+            </div>
+        </div>
+
+        <p class="hint">가상 크레딧 전용 · 현금 거래 없음<br>Play credits only — no real money</p>
+    </section>
+
+    <!-- ===== 블록 쌓기 ===== -->
+    <section id="scr-block" class="screen hidden game-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Lines</span><span class="stat-val" data-lines>0</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="cv-block"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint">좌우 밀기 = 이동 · 탭 = 회전 · 아래로 쓸기 = 빠른 낙하<br>Drag = move · Tap = rotate · Swipe down = drop</p>
+    </section>
+
+    <!-- ===== 비행기 슈팅 ===== -->
+    <section id="scr-shoot" class="screen hidden game-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Wave</span><span class="stat-val" data-wave>1</span></div>
+                <div class="stat"><span class="stat-label">Life</span><span class="stat-val" data-life>3</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="cv-shoot"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint">화면을 끌어서 이동 · 총알은 자동 발사<br>Drag to move · Auto-fire</p>
+    </section>
+
+    <!-- ===== 뱀 키우기 ===== -->
+    <section id="scr-snake" class="screen hidden game-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="cv-snake"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint">쓸어서 방향 전환 · 벽과 몸에 닿으면 끝<br>Swipe to turn · Avoid walls and yourself</p>
+    </section>
+
+    <!-- ===== 벽돌 깨기 ===== -->
+    <section id="scr-brick" class="screen hidden game-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Stage</span><span class="stat-val" data-stage>1</span></div>
+                <div class="stat"><span class="stat-label">Life</span><span class="stat-val" data-life>3</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="cv-brick"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint">화면을 끌어서 받침대 이동<br>Drag to move the paddle</p>
+    </section>
+
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   공용 유틸
+   ============================================================ */
+
+/* ============================================================
+   🔥 HOT 테마
+
+   파티 게임의 HOT 모드와 같은 성격입니다. 기본은 꺼져 있고, 켜면 색이 심야
+   라운지 톤으로 바뀌면서 게임이 끝날 때 도발적인 멘트가 붙습니다.
+   야한 "분위기"까지가 목적이라 표현은 암시·농담 수준으로만 씁니다.
+   ============================================================ */
+
+const HOT = {
+    on: localStorage.getItem('gijoArcade_hot') === '1',
+    /** 캔버스 배경처럼 JS 로 그리는 색을 테마에 맞게 골라줍니다. */
+    pick(normal, hot) { return this.on ? hot : normal; }
+};
+
+/** 졌을 때 — 놀리는 멘트 */
+const HOT_TAUNTS = [
+    { kr: '그 실력이면 오늘 밤 계속 마셔야겠는데? 🍸', en: "At that score, you're drinking all night." },
+    { kr: '벌써 끝? 실망인데 😏', en: 'Over already? Disappointing.' },
+    { kr: '한 잔 마시고 다시 와 🥃', en: 'Take a shot and come back.' },
+    { kr: '집중이 안 되나 봐? 누구 생각하느라 💭', en: "Distracted? Thinking about someone?" },
+    { kr: '이 정도면 오늘 술값은 네가 내야지 💸', en: "At this rate you're buying the drinks." },
+    { kr: '손이 떨렸어? 긴장했네 😘', en: 'Shaky hands? Someone got nervous.' }
+];
+
+/** 신기록 — 치켜세우는 멘트 */
+const HOT_PRAISE = [
+    { kr: '오늘 밤 주인공은 너다 🔥', en: "Tonight's star is you." },
+    { kr: '이 정도면 자랑해도 됨 😏', en: 'Okay, that one you can brag about.' },
+    { kr: '위험한 매력이 있네 💋', en: "Now that's dangerously good." },
+    { kr: '술은 오늘 안 마셔도 되겠어 🍾', en: 'You earned a night off from drinking.' }
+];
+
+/** 판을 깼을 때 뜨는 보상 카드. 네온 사인 느낌의 아이콘 + 도발 멘트. */
+const HOT_REWARDS = [
+    { icon: '💋', kr: '한 잔 받아', en: 'Here, have a drink' },
+    { icon: '🔥', kr: '오늘 밤 뜨겁네', en: 'The night is heating up' },
+    { icon: '🍸', kr: '이건 칭찬이야', en: 'Take that as a compliment' },
+    { icon: '💃', kr: '분위기 좋은데?', en: 'Now we are talking' },
+    { icon: '😘', kr: '계속 그렇게 해봐', en: 'Keep going like that' },
+    { icon: '🌶️', kr: '매운맛 인정', en: 'Spicy. Respect.' },
+    { icon: '🥂', kr: '이건 건배각이지', en: "That deserves a toast" },
+    { icon: '💫', kr: '눈을 못 떼겠는데', en: "Can't take my eyes off that" }
+];
+
+const pickMsg = (pool) => pool[(Math.random() * pool.length) | 0];
+
+/** 최고 점수는 기기에만 남깁니다(서버 없음). 키는 게임별로 나눕니다. */
+const store = {
+    best(id) {
+        const v = parseInt(localStorage.getItem('gijoArcade_best_' + id) || '0', 10);
+        return Number.isFinite(v) ? v : 0;
+    },
+    setBest(id, v) {
+        if (v > this.best(id)) {
+            localStorage.setItem('gijoArcade_best_' + id, String(v));
+            return true; // 신기록
+        }
+        return false;
+    }
+};
+
+/** 아주 작은 효과음. 첫 사용자 입력 뒤에만 열립니다(브라우저 자동재생 정책). */
+const sfx = {
+    ctx: null,
+    init() {
+        if (this.ctx) return;
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) this.ctx = new AC();
+        } catch { /* 소리는 없어도 게임은 됩니다 */ }
+    },
+    blip(freq = 440, dur = 0.06, type = 'square', gain = 0.05) {
+        if (!this.ctx || this.ctx.state === 'suspended') return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(g).connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+    },
+    good() { this.blip(880, 0.07, 'square', 0.05); },
+    hit()  { this.blip(180, 0.12, 'sawtooth', 0.06); },
+    over() { this.blip(110, 0.5, 'sawtooth', 0.07); }
+};
+
+const vibe = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
+
+/**
+ * 캔버스를 표시 크기에 맞춰 잡아줍니다.
+ * devicePixelRatio 를 반영하지 않으면 고해상도 폰에서 전부 흐릿하게 보입니다.
+ * 2배까지만 올리는 건 3배 기기에서 픽셀이 9배가 되어 프레임이 떨어지기 때문입니다.
+ */
+function fitCanvas(canvas) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(r.width));
+    const h = Math.max(1, Math.round(r.height));
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w, h };
+}
+
+/** 네온 느낌의 사각형 하나. 게임 4개가 전부 이걸로 그립니다. */
+function neonRect(ctx, x, y, w, h, color, radius = 3, glow = 8) {
+    ctx.save();
+    ctx.shadowBlur = glow;
+    ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, radius);
+    else ctx.rect(x, y, w, h);
+    ctx.fill();
+    ctx.restore();
+}
+
+/* ============================================================
+   게임 공통 뼈대
+
+   각 게임은 { id, canvas, overlay, start(), stop(), ... } 형태의 객체이고
+   engine 이 rAF 루프와 화면 전환을 맡습니다. 게임을 떠날 때 반드시 stop() 이
+   불려야 합니다 — 안 그러면 메뉴로 나간 뒤에도 루프가 계속 돌면서 배터리를
+   먹고, 다시 들어올 때 루프가 두 개가 됩니다.
+   ============================================================ */
+
+class Game {
+    constructor(id, screenId, canvasId) {
+        this.id = id;
+        this.screen = document.getElementById(screenId);
+        this.canvas = document.getElementById(canvasId);
+        this.overlay = this.screen.querySelector('[data-overlay]');
+        this.raf = null;
+        this.last = 0;
+        this.running = false;
+        this.over = false;
+        this.score = 0;
+        this._binds = [];
+    }
+
+    setStat(name, value) {
+        const el = this.screen.querySelector(`[data-${name}]`);
+        if (el) el.textContent = value;
+    }
+
+    /** addEventListener 를 기억해뒀다가 stop() 에서 한 번에 떼어냅니다. */
+    on(target, type, fn, opts) {
+        target.addEventListener(type, fn, opts);
+        this._binds.push([target, type, fn, opts]);
+    }
+
+    offAll() {
+        this._binds.forEach(([t, ty, fn, o]) => t.removeEventListener(ty, fn, o));
+        this._binds = [];
+    }
+
+    /**
+     * 판을 깼을 때 잠깐 뜨는 보상 카드. HOT 테마일 때만 나옵니다.
+     * 게임 루프를 멈추지 않습니다 — 떴다 사라지는 동안에도 계속 플레이됩니다.
+     */
+    showReward() {
+        if (!HOT.on) return;
+        const wrap = this.canvas.parentElement;
+        const r = pickMsg(HOT_REWARDS);
+        const el = document.createElement('div');
+        el.className = 'reward-card';
+        el.innerHTML =
+            `<span class="reward-icon">${r.icon}</span>` +
+            `<span class="reward-kr">${r.kr}</span>` +
+            `<span class="reward-en">${r.en}</span>`;
+        wrap.appendChild(el);
+        sfx.blip(1046, 0.09, 'triangle', 0.05);
+        vibe([0, 30, 40, 30]);
+        setTimeout(() => el.remove(), 2100);
+    }
+
+    showOverlay(html) {
+        this.overlay.innerHTML = html;
+        this.overlay.classList.remove('hidden');
+        const btn = this.overlay.querySelector('.ov-btn');
+        if (btn) btn.onclick = () => { sfx.init(); this.begin(); };
+    }
+
+    hideOverlay() { this.overlay.classList.add('hidden'); }
+
+    intro() {
+        this.setStat('bestval', store.best(this.id));
+        const tease = HOT.on
+            ? '<div class="ov-taunt">자신 있어? 😏<span class="i18n-sub">Feeling confident?</span></div>'
+            : '';
+        this.showOverlay(`
+            <div class="ov-title">${this.titleEn}</div>
+            <div class="ov-kr">${this.titleKr}</div>
+            <div class="ov-best">BEST ${store.best(this.id)}</div>
+            ${tease}
+            <button class="ov-btn">시작 · Start</button>
+            <p class="ov-hint">${this.introHint}</p>
+        `);
+    }
+
+    gameOver() {
+        if (this.over) return;
+        this.over = true;
+        this.running = false;
+        sfx.over();
+        vibe([0, 120, 60, 200]);
+        const isNew = store.setBest(this.id, this.score);
+        this.setStat('bestval', store.best(this.id));
+        let taunt = '';
+        if (HOT.on) {
+            const m = pickMsg(isNew ? HOT_PRAISE : HOT_TAUNTS);
+            taunt = `<div class="ov-taunt">${m.kr}<span class="i18n-sub">${m.en}</span></div>`;
+        }
+        this.showOverlay(`
+            <div class="ov-title">GAME OVER</div>
+            <div class="ov-kr">게임 종료</div>
+            <div class="ov-score">${this.score}</div>
+            <div class="ov-best">BEST ${store.best(this.id)}</div>
+            ${isNew ? '<div class="ov-new">🏆 신기록! · New record!</div>' : ''}
+            ${taunt}
+            <button class="ov-btn">다시 하기 · Retry</button>
+        `);
+    }
+
+    /**
+     * 화면에 들어올 때.
+     *
+     * 🔴 입력 바인딩은 반드시 여기서 한 번만 합니다. 예전에는 각 게임의 reset() 안에서
+     *    했는데, reset() 은 enter() 와 begin() 양쪽에서 불립니다. 그래서 시작할 때마다
+     *    리스너가 한 겹씩 쌓여, 재시도를 반복하면 스와이프 한 번에 방향이 두 번 세 번
+     *    바뀌었습니다(뱀이 제멋대로 꺾임). exit() 의 offAll() 과 짝을 맞춥니다.
+     */
+    enter() {
+        this.resize();
+        this.over = false;
+        this.running = false;
+        this.offAll();
+        this.bindInput();
+        this.reset();
+        this.draw();
+        this.intro();
+    }
+
+    /** 화면을 떠날 때 — 루프와 리스너를 반드시 정리합니다. */
+    exit() {
+        this.running = false;
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+        this.offAll();
+    }
+
+    resize() {
+        const { ctx, w, h } = fitCanvas(this.canvas);
+        this.ctx = ctx;
+        this.W = w;
+        this.H = h;
+        if (this.onResize) this.onResize();
+    }
+
+    begin() {
+        this.hideOverlay();
+        this.over = false;
+        this.score = 0;
+        this.reset();
+        this.running = true;
+        this.last = performance.now();
+        if (this.raf) cancelAnimationFrame(this.raf);
+        const loop = (t) => {
+            if (!this.running) return;
+            // 탭을 백그라운드에 뒀다 오면 dt 가 몇 초로 튑니다. 물리가 터지지 않게 자릅니다.
+            const dt = Math.min((t - this.last) / 1000, 0.05);
+            this.last = t;
+            this.update(dt);
+            this.draw();
+            if (this.running) this.raf = requestAnimationFrame(loop);
+        };
+        this.raf = requestAnimationFrame(loop);
+    }
+}
+
+/* ============================================================
+   1) Block Drop — 블록 쌓기
+   ============================================================ */
+
+const COLS = 10, ROWS = 20;
+
+const PIECES = [
+    { cells: [[1,1,1,1]],                 color: '#00f3ff' }, // I
+    { cells: [[1,1],[1,1]],               color: '#ffe14d' }, // O
+    { cells: [[0,1,0],[1,1,1]],           color: '#a200ff' }, // T
+    { cells: [[0,1,1],[1,1,0]],           color: '#3ed973' }, // S
+    { cells: [[1,1,0],[0,1,1]],           color: '#ff0055' }, // Z
+    { cells: [[1,0,0],[1,1,1]],           color: '#4d8cff' }, // J
+    { cells: [[0,0,1],[1,1,1]],           color: '#ffaa00' }  // L
+];
+
+class BlockDrop extends Game {
+    constructor() {
+        super('block', 'scr-block', 'cv-block');
+        this.titleEn = 'GIJO Block Drop';
+        this.titleKr = '블록 쌓기';
+        this.introHint = '좌우로 밀어 옮기고, 탭하면 회전합니다. 아래로 쓸면 바로 떨어집니다.<br>Drag to move, tap to rotate, swipe down to hard-drop.';
+    }
+
+    reset() {
+        this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        this.lines = 0;
+        this.dropMs = 800;
+        this.acc = 0;
+        this.piece = null;
+        this.setStat('score', 0);
+        this.setStat('lines', 0);
+        this.spawn();
+    }
+
+    onResize() {
+        // 격자가 화면에 꽉 차되 비율(10:20)은 유지되도록 셀 크기를 맞춥니다.
+        this.cell = Math.floor(Math.min(this.W / COLS, this.H / ROWS));
+        this.offX = Math.floor((this.W - this.cell * COLS) / 2);
+        this.offY = Math.floor((this.H - this.cell * ROWS) / 2);
+    }
+
+    spawn() {
+        const p = PIECES[(Math.random() * PIECES.length) | 0];
+        this.piece = {
+            cells: p.cells.map(r => r.slice()),
+            color: p.color,
+            x: ((COLS - p.cells[0].length) / 2) | 0,
+            y: 0
+        };
+        if (this.collides(this.piece.cells, this.piece.x, this.piece.y)) this.gameOver();
+    }
+
+    collides(cells, px, py) {
+        for (let r = 0; r < cells.length; r++) {
+            for (let c = 0; c < cells[r].length; c++) {
+                if (!cells[r][c]) continue;
+                const x = px + c, y = py + r;
+                if (x < 0 || x >= COLS || y >= ROWS) return true;
+                if (y >= 0 && this.grid[y][x]) return true;
+            }
+        }
+        return false;
+    }
+
+    rotate() {
+        const c = this.piece.cells;
+        // 전치 후 각 행을 뒤집으면 시계방향 90도입니다.
+        const rotated = c[0].map((_, i) => c.map(row => row[i]).reverse());
+        // 벽에 붙어 있을 때도 돌아가도록 좌우로 살짝 밀어 봅니다(월킥).
+        for (const dx of [0, -1, 1, -2, 2]) {
+            if (!this.collides(rotated, this.piece.x + dx, this.piece.y)) {
+                this.piece.cells = rotated;
+                this.piece.x += dx;
+                sfx.blip(660, 0.04);
+                return;
+            }
+        }
+    }
+
+    move(dx) {
+        if (!this.collides(this.piece.cells, this.piece.x + dx, this.piece.y)) {
+            this.piece.x += dx;
+        }
+    }
+
+    stepDown() {
+        if (!this.collides(this.piece.cells, this.piece.x, this.piece.y + 1)) {
+            this.piece.y++;
+            return true;
+        }
+        this.lock();
+        return false;
+    }
+
+    hardDrop() {
+        while (!this.collides(this.piece.cells, this.piece.x, this.piece.y + 1)) this.piece.y++;
+        this.lock();
+    }
+
+    lock() {
+        const { cells, x, y, color } = this.piece;
+        for (let r = 0; r < cells.length; r++) {
+            for (let c = 0; c < cells[r].length; c++) {
+                if (cells[r][c] && y + r >= 0) this.grid[y + r][x + c] = color;
+            }
+        }
+        this.clearLines();
+        this.spawn();
+    }
+
+    clearLines() {
+        let cleared = 0;
+        for (let r = ROWS - 1; r >= 0; r--) {
+            if (this.grid[r].every(Boolean)) {
+                this.grid.splice(r, 1);
+                this.grid.unshift(Array(COLS).fill(null));
+                cleared++;
+                r++; // 같은 줄을 다시 검사 (위에서 내려온 줄도 꽉 찼을 수 있음)
+            }
+        }
+        if (!cleared) return;
+        this.lines += cleared;
+        // 한 번에 여러 줄을 지울수록 크게 줍니다.
+        this.score += [0, 100, 300, 500, 800][cleared];
+        this.setStat('score', this.score);
+        this.setStat('lines', this.lines);
+        // 10줄마다 빨라집니다(최소 120ms).
+        this.dropMs = Math.max(120, 800 - Math.floor(this.lines / 10) * 70);
+        // 5줄 구간을 넘길 때마다 보상
+        if (Math.floor((this.lines - cleared) / 5) !== Math.floor(this.lines / 5)) this.showReward();
+        sfx.good();
+        vibe(cleared >= 2 ? [0, 40, 30, 60] : 20);
+    }
+
+    bindInput() {
+        let sx = 0, sy = 0, lastX = 0, moved = false, startT = 0;
+
+        this.on(this.canvas, 'touchstart', (e) => {
+            e.preventDefault();
+            sfx.init();
+            const t = e.touches[0];
+            sx = lastX = t.clientX; sy = t.clientY;
+            moved = false; startT = performance.now();
+        }, { passive: false });
+
+        this.on(this.canvas, 'touchmove', (e) => {
+            e.preventDefault();
+            if (!this.running) return;
+            const t = e.touches[0];
+            // 한 칸 폭만큼 끌 때마다 한 칸씩 옮깁니다.
+            const dx = t.clientX - lastX;
+            if (Math.abs(dx) > this.cell) {
+                this.move(dx > 0 ? 1 : -1);
+                lastX = t.clientX;
+                moved = true;
+            }
+            if (t.clientY - sy > this.cell * 2.5 && Math.abs(t.clientX - sx) < this.cell * 2) {
+                this.hardDrop();
+                moved = true;
+                sy = t.clientY + 9999; // 한 번의 쓸기로 두 번 떨어지지 않게
+            }
+        }, { passive: false });
+
+        this.on(this.canvas, 'touchend', (e) => {
+            e.preventDefault();
+            if (!this.running) return;
+            // 거의 안 움직인 짧은 터치 = 회전
+            if (!moved && performance.now() - startT < 300) this.rotate();
+        }, { passive: false });
+
+        // 데스크톱에서도 해볼 수 있게 키보드도 받습니다.
+        this.on(window, 'keydown', (e) => {
+            if (!this.running) return;
+            if (e.key === 'ArrowLeft') this.move(-1);
+            else if (e.key === 'ArrowRight') this.move(1);
+            else if (e.key === 'ArrowDown') this.stepDown();
+            else if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); this.rotate(); }
+        });
+    }
+
+    update(dt) {
+        this.acc += dt * 1000;
+        if (this.acc >= this.dropMs) {
+            this.acc = 0;
+            this.stepDown();
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx, cell = this.cell, ox = this.offX, oy = this.offY;
+        ctx.clearRect(0, 0, this.W, this.H);
+
+        // 판 배경 + 격자
+        ctx.fillStyle = HOT.pick('#0b0b10', '#180a18');
+        ctx.fillRect(ox, oy, cell * COLS, cell * ROWS);
+        ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+        ctx.lineWidth = 1;
+        for (let c = 0; c <= COLS; c++) {
+            ctx.beginPath();
+            ctx.moveTo(ox + c * cell + 0.5, oy);
+            ctx.lineTo(ox + c * cell + 0.5, oy + cell * ROWS);
+            ctx.stroke();
+        }
+        for (let r = 0; r <= ROWS; r++) {
+            ctx.beginPath();
+            ctx.moveTo(ox, oy + r * cell + 0.5);
+            ctx.lineTo(ox + cell * COLS, oy + r * cell + 0.5);
+            ctx.stroke();
+        }
+
+        // 쌓인 블록
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (this.grid[r][c]) {
+                    neonRect(ctx, ox + c * cell + 1, oy + r * cell + 1, cell - 2, cell - 2, this.grid[r][c], 3, 6);
+                }
+            }
+        }
+
+        // 떨어질 자리 미리보기 — 어디에 놓일지 모르면 조작이 답답합니다.
+        if (this.piece && !this.over) {
+            let gy = this.piece.y;
+            while (!this.collides(this.piece.cells, this.piece.x, gy + 1)) gy++;
+            ctx.save();
+            ctx.globalAlpha = 0.22;
+            this.piece.cells.forEach((row, r) => row.forEach((v, c) => {
+                if (v) neonRect(ctx, ox + (this.piece.x + c) * cell + 1, oy + (gy + r) * cell + 1, cell - 2, cell - 2, this.piece.color, 3, 0);
+            }));
+            ctx.restore();
+
+            this.piece.cells.forEach((row, r) => row.forEach((v, c) => {
+                if (v && this.piece.y + r >= 0) {
+                    neonRect(ctx, ox + (this.piece.x + c) * cell + 1, oy + (this.piece.y + r) * cell + 1, cell - 2, cell - 2, this.piece.color, 3, 10);
+                }
+            }));
+        }
+    }
+}
+
+/* ============================================================
+   2) Space Shooter — 비행기 슈팅
+   ============================================================ */
+
+class SpaceShooter extends Game {
+    constructor() {
+        super('shoot', 'scr-shoot', 'cv-shoot');
+        this.titleEn = 'GIJO Space Shooter';
+        this.titleKr = '비행기 슈팅';
+        this.introHint = '화면을 끌어 비행기를 옮기세요. 총알은 알아서 나갑니다.<br>Drag to move your ship. It fires automatically.';
+    }
+
+    reset() {
+        this.ship = { x: this.W / 2, y: this.H - 46, r: 14 };
+        this.bullets = [];
+        this.enemyShots = [];
+        this.enemies = [];
+        this.stars = Array.from({ length: 46 }, () => ({
+            x: Math.random() * this.W, y: Math.random() * this.H,
+            s: 0.4 + Math.random() * 1.4, v: 14 + Math.random() * 46
+        }));
+        this.wave = 1;
+        this.lives = 3;
+        this.fireAcc = 0;
+        this.invuln = 0;
+        this.setStat('score', 0);
+        this.setStat('wave', 1);
+        this.setStat('life', 3);
+        this.spawnWave();
+    }
+
+    onResize() {
+        if (this.ship) {
+            this.ship.y = this.H - 46;
+            this.ship.x = Math.min(this.ship.x, this.W - 16);
+        }
+    }
+
+    spawnWave() {
+        this.enemies = [];
+        const cols = Math.min(7, 4 + Math.floor(this.wave / 2));
+        const rows = Math.min(4, 2 + Math.floor(this.wave / 3));
+        const gapX = this.W / (cols + 1);
+        const palette = ['#ff0055', '#ff6b9d', '#a200ff', '#4d8cff'];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                this.enemies.push({
+                    x: gapX * (c + 1), y: 52 + r * 40,
+                    baseX: gapX * (c + 1),
+                    r: 13, color: palette[r % palette.length],
+                    diving: false, vx: 0, vy: 0,
+                    hp: 1 + (this.wave > 4 && r === 0 ? 1 : 0)
+                });
+            }
+        }
+        this.swing = 0;
+        this.enemyDir = 1;
+        this.descend = 0;
+    }
+
+    bindInput() {
+        const moveTo = (clientX) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.ship.x = Math.max(16, Math.min(this.W - 16, clientX - rect.left));
+        };
+        this.on(this.canvas, 'touchstart', (e) => {
+            e.preventDefault(); sfx.init();
+            moveTo(e.touches[0].clientX);
+        }, { passive: false });
+        this.on(this.canvas, 'touchmove', (e) => {
+            e.preventDefault();
+            moveTo(e.touches[0].clientX);
+        }, { passive: false });
+        this.on(this.canvas, 'mousemove', (e) => {
+            if (e.buttons) moveTo(e.clientX);
+        });
+        this.on(window, 'keydown', (e) => {
+            if (!this.running) return;
+            if (e.key === 'ArrowLeft') this.ship.x = Math.max(16, this.ship.x - 24);
+            if (e.key === 'ArrowRight') this.ship.x = Math.min(this.W - 16, this.ship.x + 24);
+        });
+    }
+
+    update(dt) {
+        // 배경 별
+        this.stars.forEach(s => {
+            s.y += s.v * dt;
+            if (s.y > this.H) { s.y = -2; s.x = Math.random() * this.W; }
+        });
+
+        if (this.invuln > 0) this.invuln -= dt;
+
+        // 자동 발사
+        this.fireAcc += dt;
+        const fireRate = 0.22;
+        if (this.fireAcc >= fireRate) {
+            this.fireAcc = 0;
+            this.bullets.push({ x: this.ship.x, y: this.ship.y - 16, v: -430 });
+            sfx.blip(1200, 0.02, 'square', 0.02);
+        }
+
+        this.bullets.forEach(b => b.y += b.v * dt);
+        this.bullets = this.bullets.filter(b => b.y > -10);
+
+        this.enemyShots.forEach(b => b.y += b.v * dt);
+        this.enemyShots = this.enemyShots.filter(b => b.y < this.H + 10);
+
+        // 편대는 좌우로 흔들리며 조금씩 내려옵니다.
+        const speed = 26 + this.wave * 7;
+        this.swing += this.enemyDir * speed * dt;
+        if (Math.abs(this.swing) > 34) {
+            this.enemyDir *= -1;
+            this.descend += 9;
+        }
+
+        this.enemies.forEach(en => {
+            if (en.diving) {
+                en.x += en.vx * dt;
+                en.y += en.vy * dt;
+                // 아래로 빠져나가면 위에서 다시 편대로 복귀
+                if (en.y > this.H + 20) {
+                    en.diving = false;
+                    en.y = -20;
+                    en.vx = en.vy = 0;
+                }
+            } else {
+                en.x = en.baseX + this.swing;
+                en.y += 0; // 세로는 descend 로 반영
+            }
+        });
+
+        // 가끔 한 대가 급강하합니다.
+        if (Math.random() < dt * (0.35 + this.wave * 0.09)) {
+            const pool = this.enemies.filter(e => !e.diving);
+            if (pool.length) {
+                const en = pool[(Math.random() * pool.length) | 0];
+                en.diving = true;
+                en.vx = (this.ship.x - en.x) * 0.55;
+                en.vy = 130 + this.wave * 14;
+            }
+        }
+
+        // 적 사격
+        if (Math.random() < dt * (0.7 + this.wave * 0.2)) {
+            const pool = this.enemies.filter(e => e.y < this.H - 80);
+            if (pool.length) {
+                const en = pool[(Math.random() * pool.length) | 0];
+                this.enemyShots.push({ x: en.x, y: en.y + 12, v: 190 + this.wave * 10 });
+            }
+        }
+
+        const enemyY = (en) => en.diving ? en.y : en.y + this.descend;
+
+        // 내 총알 ↔ 적
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const b = this.bullets[i];
+            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                const en = this.enemies[j];
+                const ey = enemyY(en);
+                if (Math.hypot(b.x - en.x, b.y - ey) < en.r + 4) {
+                    this.bullets.splice(i, 1);
+                    en.hp--;
+                    if (en.hp <= 0) {
+                        this.enemies.splice(j, 1);
+                        this.score += en.diving ? 150 : 100;
+                        this.setStat('score', this.score);
+                        sfx.good();
+                    } else {
+                        sfx.blip(300, 0.04);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 적 총알 / 적 본체 ↔ 나
+        const hitMe = () => {
+            if (this.invuln > 0) return;
+            this.lives--;
+            this.setStat('life', Math.max(0, this.lives));
+            this.invuln = 1.6;
+            sfx.hit();
+            vibe(90);
+            if (this.lives <= 0) this.gameOver();
+        };
+
+        for (let i = this.enemyShots.length - 1; i >= 0; i--) {
+            const b = this.enemyShots[i];
+            if (Math.hypot(b.x - this.ship.x, b.y - this.ship.y) < this.ship.r + 4) {
+                this.enemyShots.splice(i, 1);
+                hitMe();
+            }
+        }
+        for (const en of this.enemies) {
+            const ey = enemyY(en);
+            if (Math.hypot(en.x - this.ship.x, ey - this.ship.y) < en.r + this.ship.r - 4) {
+                en.diving = false; en.y = -30;
+                hitMe();
+            }
+            // 편대가 바닥까지 내려오면 실패
+            if (ey > this.H - 24 && !en.diving) hitMe();
+        }
+
+        // 다음 웨이브
+        if (this.enemies.length === 0) {
+            this.wave++;
+            this.setStat('wave', this.wave);
+            this.score += 250;
+            this.setStat('score', this.score);
+            this.showReward();
+            this.spawnWave();
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.W, this.H);
+        ctx.fillStyle = HOT.pick('#05050a', '#12040f');
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        this.stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
+
+        this.enemies.forEach(en => {
+            const ey = en.diving ? en.y : en.y + this.descend;
+            ctx.save();
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = en.color;
+            ctx.fillStyle = en.color;
+            // 아래를 향한 삼각형 = 적기
+            ctx.beginPath();
+            ctx.moveTo(en.x, ey + en.r);
+            ctx.lineTo(en.x - en.r, ey - en.r * 0.7);
+            ctx.lineTo(en.x + en.r, ey - en.r * 0.7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        });
+
+        ctx.fillStyle = '#fff';
+        this.bullets.forEach(b => neonRect(ctx, b.x - 1.5, b.y - 8, 3, 12, '#00f3ff', 2, 8));
+        this.enemyShots.forEach(b => neonRect(ctx, b.x - 2, b.y - 5, 4, 10, '#ffe14d', 2, 8));
+
+        // 무적 시간에는 깜빡입니다.
+        if (this.invuln <= 0 || Math.floor(this.invuln * 12) % 2 === 0) {
+            const s = this.ship;
+            ctx.save();
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = '#00f3ff';
+            ctx.fillStyle = '#e8feff';
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y - s.r);
+            ctx.lineTo(s.x - s.r, s.y + s.r * 0.8);
+            ctx.lineTo(s.x, s.y + s.r * 0.35);
+            ctx.lineTo(s.x + s.r, s.y + s.r * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+}
+
+/* ============================================================
+   3) Snake — 뱀 키우기
+   ============================================================ */
+
+class Snake extends Game {
+    constructor() {
+        super('snake', 'scr-snake', 'cv-snake');
+        this.titleEn = 'GIJO Neon Snake';
+        this.titleKr = '뱀 키우기';
+        this.introHint = '쓸어서 방향을 바꾸세요. 먹을수록 길어지고 빨라집니다.<br>Swipe to turn. It gets longer and faster as you eat.';
+    }
+
+    onResize() {
+        // 짧은 변만 보고 칸을 정하면 세로로 긴 폰에서 40칸이 넘게 나와, 칸이 잘고
+        // 판이 너무 넓어집니다. 가로 16칸 / 세로 24칸을 기준으로 잡습니다.
+        this.cell = Math.max(12, Math.floor(Math.min(this.W / 16, this.H / 24)));
+        this.cols = Math.floor(this.W / this.cell);
+        this.rows = Math.floor(this.H / this.cell);
+        this.offX = Math.floor((this.W - this.cols * this.cell) / 2);
+        this.offY = Math.floor((this.H - this.rows * this.cell) / 2);
+    }
+
+    reset() {
+        this.onResize();
+        // 가운데에서 시작하면 오른쪽 벽까지 8칸뿐이라, 조작법을 읽는 사이에 박습니다.
+        // 왼쪽 1/3 지점에서 시작해 달릴 거리를 벌어줍니다.
+        const cx = Math.max(3, Math.floor(this.cols / 3)), cy = Math.floor(this.rows / 2);
+        this.snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+        this.dir = { x: 1, y: 0 };
+        this.pendingDir = null;
+        // 🔴 첫 조작 전에는 움직이지 않습니다. 예전에는 시작 버튼을 누른 순간부터
+        //    오른쪽으로 달려서, 안내를 읽는 1~2초 사이에 벽에 박고 끝났습니다.
+        this.awaitingFirstMove = true;
+        this.stepMs = 150;
+        this.acc = 0;
+        this.setStat('score', 0);
+        this.setStat('bestval', store.best(this.id));
+        this.placeFood();
+    }
+
+    placeFood() {
+        const taken = new Set(this.snake.map(s => s.x + ',' + s.y));
+        let x, y, guard = 0;
+        do {
+            x = (Math.random() * this.cols) | 0;
+            y = (Math.random() * this.rows) | 0;
+        } while (taken.has(x + ',' + y) && ++guard < 500);
+        this.food = { x, y };
+    }
+
+    turn(x, y) {
+        // 몸통으로 되돌아가는 반대 방향은 막습니다.
+        if (this.dir.x === -x && this.dir.y === -y) return;
+        this.pendingDir = { x, y };
+        this.awaitingFirstMove = false;
+    }
+
+    bindInput() {
+        let sx = 0, sy = 0;
+        this.on(this.canvas, 'touchstart', (e) => {
+            e.preventDefault(); sfx.init();
+            sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        }, { passive: false });
+        this.on(this.canvas, 'touchend', (e) => {
+            e.preventDefault();
+            const t = e.changedTouches[0];
+            const dx = t.clientX - sx, dy = t.clientY - sy;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return; // 그냥 탭
+            if (Math.abs(dx) > Math.abs(dy)) this.turn(dx > 0 ? 1 : -1, 0);
+            else this.turn(0, dy > 0 ? 1 : -1);
+        }, { passive: false });
+        this.on(window, 'keydown', (e) => {
+            if (!this.running) return;
+            const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+            if (map[e.key]) { e.preventDefault(); this.turn(...map[e.key]); }
+        });
+    }
+
+    update(dt) {
+        if (this.awaitingFirstMove) return;
+
+        this.acc += dt * 1000;
+        if (this.acc < this.stepMs) return;
+        this.acc = 0;
+
+        if (this.pendingDir) { this.dir = this.pendingDir; this.pendingDir = null; }
+
+        const head = { x: this.snake[0].x + this.dir.x, y: this.snake[0].y + this.dir.y };
+
+        if (head.x < 0 || head.y < 0 || head.x >= this.cols || head.y >= this.rows) return this.gameOver();
+        // 꼬리 끝은 이번 턴에 비워지므로 충돌에서 제외합니다.
+        if (this.snake.slice(0, -1).some(s => s.x === head.x && s.y === head.y)) return this.gameOver();
+
+        this.snake.unshift(head);
+
+        if (head.x === this.food.x && head.y === this.food.y) {
+            this.score += 10;
+            this.setStat('score', this.score);
+            this.stepMs = Math.max(60, this.stepMs - 4);
+            if (this.score % 50 === 0) this.showReward();
+            this.placeFood();
+            sfx.good();
+            vibe(18);
+        } else {
+            this.snake.pop();
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx, cell = this.cell, ox = this.offX, oy = this.offY;
+        ctx.clearRect(0, 0, this.W, this.H);
+        ctx.fillStyle = HOT.pick('#07100b', '#160614');
+        ctx.fillRect(ox, oy, this.cols * cell, this.rows * cell);
+
+        ctx.strokeStyle = 'rgba(196,255,77,0.06)';
+        ctx.lineWidth = 1;
+        for (let c = 0; c <= this.cols; c++) {
+            ctx.beginPath(); ctx.moveTo(ox + c * cell + .5, oy); ctx.lineTo(ox + c * cell + .5, oy + this.rows * cell); ctx.stroke();
+        }
+        for (let r = 0; r <= this.rows; r++) {
+            ctx.beginPath(); ctx.moveTo(ox, oy + r * cell + .5); ctx.lineTo(ox + this.cols * cell, oy + r * cell + .5); ctx.stroke();
+        }
+
+        if (this.food) {
+            neonRect(ctx, ox + this.food.x * cell + cell * 0.2, oy + this.food.y * cell + cell * 0.2,
+                cell * 0.6, cell * 0.6, '#ff0055', cell, 14);
+        }
+
+        this.snake.forEach((s, i) => {
+            const color = i === 0 ? '#eaffb0' : '#3ed973';
+            neonRect(ctx, ox + s.x * cell + 1, oy + s.y * cell + 1, cell - 2, cell - 2, color, 4, i === 0 ? 14 : 6);
+        });
+
+        if (this.awaitingFirstMove && this.running) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '600 13px ' + getComputedStyle(document.body).fontFamily;
+            ctx.textAlign = 'center';
+            ctx.fillText('쓸어서 출발 · Swipe to start', this.W / 2, this.H * 0.5);
+        }
+    }
+}
+
+/* ============================================================
+   4) Brick Breaker — 벽돌 깨기
+   ============================================================ */
+
+class BrickBreaker extends Game {
+    constructor() {
+        super('brick', 'scr-brick', 'cv-brick');
+        this.titleEn = 'GIJO Brick Breaker';
+        this.titleKr = '벽돌 깨기';
+        this.introHint = '화면을 끌어 받침대를 움직이세요. 공을 놓치면 목숨이 줄어듭니다.<br>Drag to move the paddle. Miss the ball and you lose a life.';
+    }
+
+    reset() {
+        this.stage = 1;
+        this.lives = 3;
+        this.setStat('score', 0);
+        this.setStat('stage', 1);
+        this.setStat('life', 3);
+        this.buildStage();
+    }
+
+    onResize() {
+        this.padW = Math.max(56, this.W * 0.2);
+        this.padH = 12;
+        if (this.pad) this.pad.x = Math.min(this.pad.x, this.W - this.padW / 2);
+    }
+
+    buildStage() {
+        this.onResize();
+        this.pad = { x: this.W / 2, y: this.H - 26 };
+        this.resetBall();
+
+        const cols = 7;
+        const rows = Math.min(7, 4 + this.stage);
+        const padX = 8, gap = 4;
+        const bw = (this.W - padX * 2 - gap * (cols - 1)) / cols;
+        const bh = 18;
+        const palette = ['#ff0055', '#ffaa00', '#ffe14d', '#3ed973', '#00f3ff', '#a200ff'];
+        this.bricks = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                this.bricks.push({
+                    x: padX + c * (bw + gap), y: 40 + r * (bh + gap),
+                    w: bw, h: bh,
+                    color: palette[r % palette.length],
+                    hp: r === 0 && this.stage > 2 ? 2 : 1
+                });
+            }
+        }
+    }
+
+    resetBall() {
+        const speed = 260 + this.stage * 18;
+        const angle = (-60 - Math.random() * 60) * Math.PI / 180; // 위쪽으로
+        this.ball = {
+            x: this.pad.x, y: this.pad.y - 14, r: 7,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            stuck: true
+        };
+    }
+
+    bindInput() {
+        const moveTo = (clientX) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.pad.x = Math.max(this.padW / 2, Math.min(this.W - this.padW / 2, clientX - rect.left));
+            if (this.ball.stuck) this.ball.x = this.pad.x;
+        };
+        this.on(this.canvas, 'touchstart', (e) => {
+            e.preventDefault(); sfx.init();
+            moveTo(e.touches[0].clientX);
+            this.ball.stuck = false;
+        }, { passive: false });
+        this.on(this.canvas, 'touchmove', (e) => {
+            e.preventDefault();
+            moveTo(e.touches[0].clientX);
+        }, { passive: false });
+        this.on(this.canvas, 'mousemove', (e) => moveTo(e.clientX));
+        this.on(this.canvas, 'mousedown', () => { this.ball.stuck = false; });
+    }
+
+    update(dt) {
+        const b = this.ball;
+        if (b.stuck) { b.x = this.pad.x; b.y = this.pad.y - 14; return; }
+
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+
+        if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); sfx.blip(500, 0.03); }
+        if (b.x > this.W - b.r) { b.x = this.W - b.r; b.vx = -Math.abs(b.vx); sfx.blip(500, 0.03); }
+        if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); sfx.blip(500, 0.03); }
+
+        // 받침대
+        if (b.vy > 0 && b.y + b.r >= this.pad.y && b.y - b.r <= this.pad.y + this.padH &&
+            b.x >= this.pad.x - this.padW / 2 && b.x <= this.pad.x + this.padW / 2) {
+            b.y = this.pad.y - b.r;
+            // 받침대의 어디에 맞았는지로 각도를 바꿉니다 — 조준이 가능해집니다.
+            const rel = (b.x - this.pad.x) / (this.padW / 2);
+            const speed = Math.hypot(b.vx, b.vy);
+            const angle = rel * (Math.PI / 3); // 최대 60도
+            b.vx = Math.sin(angle) * speed;
+            b.vy = -Math.cos(angle) * speed;
+            sfx.blip(700, 0.04);
+            vibe(12);
+        }
+
+        // 바닥
+        if (b.y - b.r > this.H) {
+            this.lives--;
+            this.setStat('life', Math.max(0, this.lives));
+            sfx.hit();
+            vibe(80);
+            if (this.lives <= 0) return this.gameOver();
+            this.resetBall();
+            return;
+        }
+
+        // 벽돌
+        for (let i = this.bricks.length - 1; i >= 0; i--) {
+            const k = this.bricks[i];
+            if (b.x + b.r < k.x || b.x - b.r > k.x + k.w || b.y + b.r < k.y || b.y - b.r > k.y + k.h) continue;
+
+            // 어느 면으로 들어왔는지 겹친 정도로 판단합니다.
+            const overlapX = Math.min(b.x + b.r - k.x, k.x + k.w - (b.x - b.r));
+            const overlapY = Math.min(b.y + b.r - k.y, k.y + k.h - (b.y - b.r));
+            if (overlapX < overlapY) b.vx = -b.vx;
+            else b.vy = -b.vy;
+
+            k.hp--;
+            if (k.hp <= 0) {
+                this.bricks.splice(i, 1);
+                this.score += 50;
+            } else {
+                this.score += 10;
+            }
+            this.setStat('score', this.score);
+            sfx.good();
+            break; // 한 프레임에 벽돌 하나만
+        }
+
+        if (this.bricks.length === 0) {
+            this.stage++;
+            this.score += 300;
+            this.setStat('score', this.score);
+            this.setStat('stage', this.stage);
+            this.showReward();
+            this.buildStage();
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.W, this.H);
+        ctx.fillStyle = HOT.pick('#0d0a04', '#190812');
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        this.bricks.forEach(k => {
+            ctx.save();
+            if (k.hp > 1) ctx.globalAlpha = 1;
+            neonRect(ctx, k.x, k.y, k.w, k.h, k.color, 4, k.hp > 1 ? 14 : 7);
+            ctx.restore();
+        });
+
+        neonRect(ctx, this.pad.x - this.padW / 2, this.pad.y, this.padW, this.padH, '#ffaa00', 6, 14);
+
+        const b = this.ball;
+        ctx.save();
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#ffe14d';
+        ctx.fillStyle = '#fffbe8';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        if (b.stuck) {
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.font = '600 13px ' + getComputedStyle(document.body).fontFamily;
+            ctx.textAlign = 'center';
+            ctx.fillText('화면을 눌러 시작 · Tap to launch', this.W / 2, this.H * 0.62);
+        }
+    }
+}
+
+/* ============================================================
+   화면 전환
+   ============================================================ */
+
+
+/* ============================================================
+   GIJO Slots — 5릴 3행
+
+   깃허브의 공개 슬롯 구현들(johakr/html5-slot-machine 등)을 참고했지만 코드를
+   가져오지 않고 직접 만들었습니다. 그쪽은 심볼 아트가 스타워즈 아이콘이라
+   배포 앱에 넣을 수 없고, Webpack 빌드가 붙어 이 앱의 "HTML 한 장" 구조와도
+   안 맞습니다. 참고한 건 연출 관례입니다 — 릴을 하나씩 시차를 두고 세우기,
+   스캐터가 걸릴 것 같으면 다음 릴을 느리게 세워 긴장 주기(애니타시페이션),
+   당첨 라인을 그어 보여주기, 크레딧을 굴려서 올리기.
+
+   🔴 가상 크레딧 전용입니다. 결제·환전·외부 통신이 전혀 없고, 크레딧이
+      떨어지면 무료로 다시 채워집니다. 도박이 아니라 연출을 즐기는 장난감입니다.
+   ============================================================ */
+
+const SYMBOLS = [
+    { id: 'seven',   ch: '🎰', weight: 2,  pay: [0, 0, 100, 500, 2000] },
+    { id: 'cherry',  ch: '🍒', weight: 22, pay: [0, 0, 5, 15, 40] },
+    { id: 'lemon',   ch: '🍋', weight: 20, pay: [0, 0, 5, 20, 50] },
+    { id: 'cocktail',ch: '🍸', weight: 16, pay: [0, 0, 10, 30, 80] },
+    { id: 'lips',    ch: '💋', weight: 12, pay: [0, 0, 15, 50, 120] },
+    { id: 'gem',     ch: '💎', weight: 9,  pay: [0, 0, 25, 80, 200] },
+    { id: 'dancer',  ch: '💃', weight: 6,  pay: [0, 0, 50, 150, 500] },
+    { id: 'bunny',   ch: '👯', weight: 3,  pay: [0, 0, 100, 300, 1000] },
+    { id: 'wild',    ch: '🔥', weight: 6,  pay: [0, 0, 20, 60, 150], wild: true },
+    { id: 'chili',   ch: '🌶️', weight: 4,  pay: [0, 0, 0, 0, 0], scatter: true }
+];
+
+const SYM_BY_ID = Object.fromEntries(SYMBOLS.map(s => [s.id, s]));
+
+/** 가중치를 펼친 릴 스트립. 릴마다 따로 섞어 같은 패턴이 반복돼 보이지 않게 합니다. */
+function buildStrip() {
+    const strip = [];
+    SYMBOLS.forEach(sym => {
+        for (let i = 0; i < sym.weight; i++) strip.push(sym.id);
+    });
+    for (let i = strip.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [strip[i], strip[j]] = [strip[j], strip[i]];
+    }
+    return strip;
+}
+
+/** 5개 페이라인 — 각 배열은 릴 0~4 에서 몇 번째 행을 지나는지입니다. */
+const PAYLINES = [
+    { rows: [1, 1, 1, 1, 1], color: '#ffd700' },
+    { rows: [0, 0, 0, 0, 0], color: '#00f3ff' },
+    { rows: [2, 2, 2, 2, 2], color: '#3ed973' },
+    { rows: [0, 1, 2, 1, 0], color: '#ff2d78' },
+    { rows: [2, 1, 0, 1, 2], color: '#a020f0' }
+];
+
+const BET_LEVELS = [10, 25, 50, 100, 200];
+
+/* 보너스 라운드 상한 — 없으면 스티키 와일드가 판을 뒤덮고 배수가 금방 최대가 되어
+   한 라운드에 베팅의 1000배가 넘게 나옵니다(실제로 그렇게 터졌습니다). */
+const BONUS_MAX_MULT = 5;
+const BONUS_MAX_STICKY = 2;
+const BONUS_MAX_SPINS = 20;
+const ROWS_VISIBLE = 3;
+const REEL_COUNT = 5;
+
+class Slots {
+    constructor() {
+        this.id = 'slots';
+        this.screen = document.getElementById('scr-slots');
+        this.running = false;
+        this.raf = null;
+        this.spinning = false;
+        this.strips = Array.from({ length: REEL_COUNT }, buildStrip);
+        this.betIndex = 0;
+        this.freeSpins = 0;
+        this.score = 0; // 최고 당첨액을 BEST 로 씁니다
+        this._binds = [];
+    }
+
+    get bet() { return BET_LEVELS[this.betIndex]; }
+
+    /** 보너스 라운드 상태를 처음으로 되돌립니다. */
+    resetBonus() {
+        this.bonusActive = false;
+        this.bonusMult = 1;
+        this.stickyWilds = [];
+        this.bonusTotal = 0;
+    }
+
+    setStat(name, value) {
+        const el = this.screen.querySelector(`[data-${name}]`);
+        if (el) el.textContent = value;
+    }
+
+    on(target, type, fn) {
+        target.addEventListener(type, fn);
+        this._binds.push([target, type, fn]);
+    }
+
+    offAll() {
+        this._binds.forEach(([t, ty, fn]) => t.removeEventListener(ty, fn));
+        this._binds = [];
+    }
+
+    /* ---------- 화면 수명주기 (다른 게임과 같은 인터페이스) ---------- */
+
+    enter() {
+        this.credits = parseInt(localStorage.getItem('gijoSlots_credits') || '1000', 10);
+        if (!Number.isFinite(this.credits) || this.credits < 0) this.credits = 1000;
+        this.freeSpins = 0;
+        this.spinning = false;
+        this.running = true;
+        this.resetBonus();
+
+        this.offAll();
+        this.buildReels();
+        this.bindInput();
+
+        this.setStat('credit', this.credits);
+        this.setStat('win', 0);
+        this.setStat('bestval', store.best(this.id));
+        document.getElementById('bet-val').textContent = this.bet;
+        this.setMsg('행운을 빌어요!', 'Good luck!');
+        this.updateFreeBadge();
+        this.renderPaytable();
+    }
+
+    /** 5개 맞췄을 때 받는 금액(베팅 10 기준)을 큰 것부터 보여줍니다. */
+    renderPaytable() {
+        const rows = SYMBOLS
+            .filter(sym => !sym.scatter && sym.pay[4] > 0)
+            .sort((a, b) => b.pay[4] - a.pay[4])
+            .map(sym => `<span class="pt-chip"><span class="pt-sym">${sym.ch}</span><b>${sym.pay[4]}</b></span>`)
+            .join('');
+        document.getElementById('paytable').innerHTML =
+            `<div class="pt-row">${rows}</div>` +
+            `<div class="pt-note">5개 맞췄을 때 · 베팅 10 기준 &nbsp;|&nbsp; 🔥 모든 심볼 대체 &nbsp;|&nbsp; 🌶️ 3개 = 스파이시 보너스!` +
+            `<br>5-of-a-kind at bet 10 · 🔥 wild · 🌶️ x3 = SPICY BONUS</div>`;
+    }
+
+    exit() {
+        this.running = false;
+        this.spinning = false;
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+        this.offAll();
+        this.saveCredits();
+    }
+
+    // 다른 게임과 인터페이스를 맞추기 위한 자리(캔버스가 없어 할 일이 없습니다).
+    resize() {}
+    draw() {}
+
+    saveCredits() {
+        localStorage.setItem('gijoSlots_credits', String(this.credits));
+    }
+
+    setMsg(kr, en) {
+        document.getElementById('slots-msg').innerHTML =
+            en ? `${kr}<span class="i18n-sub">${en}</span>` : kr;
+    }
+
+    updateFreeBadge() {
+        const b = document.getElementById('free-badge');
+        if (this.freeSpins > 0) {
+            b.innerHTML =
+                `🌶️ 보너스 <b>${this.freeSpins}</b>회 남음 &nbsp;·&nbsp; 배수 <b>x${this.bonusMult}</b>` +
+                (this.stickyWilds.length ? ` &nbsp;·&nbsp; 🔥<b>${this.stickyWilds.length}</b>` : '');
+            b.classList.remove('hidden');
+        } else {
+            b.classList.add('hidden');
+        }
+    }
+
+    /* ---------- 릴 구성 ---------- */
+
+    buildReels() {
+        const wrap = document.getElementById('reels');
+        wrap.innerHTML = '';
+        this.reelEls = [];
+        this.stripEls = [];
+        // 각 릴이 지금 화면에 보여주는 스트립 위치(맨 윗칸 기준)
+        this.pos = Array.from({ length: REEL_COUNT }, () => (Math.random() * 40) | 0);
+
+        for (let r = 0; r < REEL_COUNT; r++) {
+            const reel = document.createElement('div');
+            reel.className = 'reel';
+            const strip = document.createElement('div');
+            strip.className = 'reel-strip';
+            reel.appendChild(strip);
+            wrap.appendChild(reel);
+            this.reelEls.push(reel);
+            this.stripEls.push(strip);
+        }
+        this.renderReels();
+    }
+
+    /** 화면에 보이는 3칸 + 위아래 여유 1칸씩을 그립니다. */
+    renderReels() {
+        for (let r = 0; r < REEL_COUNT; r++) {
+            const strip = this.strips[r];
+            const frag = [];
+            for (let i = -1; i <= ROWS_VISIBLE; i++) {
+                const id = strip[(((this.pos[r] + i) % strip.length) + strip.length) % strip.length];
+                frag.push(`<div class="sym" data-row="${i}">${SYM_BY_ID[id].ch}</div>`);
+            }
+            this.stripEls[r].innerHTML = frag.join('');
+            this.layoutStrip(r);
+        }
+    }
+
+    layoutStrip(r) {
+        const h = this.reelEls[r].clientHeight / ROWS_VISIBLE;
+        this.stripEls[r].querySelectorAll('.sym').forEach(el => { el.style.height = h + 'px'; });
+        // 위쪽 여유 한 칸만큼 올려둡니다.
+        this.stripEls[r].style.transform = `translateY(${-h}px)`;
+    }
+
+    /**
+     * 지금 화면에 보이는 3x5 심볼 격자.
+     * 보너스 중에는 고정된 스티키 와일드가 릴 결과를 덮어씁니다.
+     */
+    visibleGrid() {
+        const grid = [];
+        for (let r = 0; r < REEL_COUNT; r++) {
+            const strip = this.strips[r];
+            const col = [];
+            for (let row = 0; row < ROWS_VISIBLE; row++) {
+                col.push(strip[(((this.pos[r] + row) % strip.length) + strip.length) % strip.length]);
+            }
+            grid.push(col);
+        }
+        if (this.bonusActive) {
+            this.stickyWilds.forEach(({ r, row }) => { grid[r][row] = 'wild'; });
+        }
+        return grid;
+    }
+
+    /** 고정된 와일드를 화면에도 그대로 박아둡니다. */
+    paintSticky() {
+        this.stickyWilds.forEach(({ r, row }) => {
+            const cell = this.stripEls[r].querySelectorAll('.sym')[row + 1];
+            if (cell) {
+                cell.textContent = SYM_BY_ID.wild.ch;
+                cell.classList.add('sticky');
+            }
+        });
+    }
+
+    /* ---------- 입력 ---------- */
+
+    bindInput() {
+        const spin = document.getElementById('spin-btn');
+        this.on(spin, 'click', () => { sfx.init(); this.spin(); });
+        this.on(document.getElementById('bet-up'), 'click', () => this.changeBet(1));
+        this.on(document.getElementById('bet-down'), 'click', () => this.changeBet(-1));
+    }
+
+    changeBet(dir) {
+        if (this.spinning || this.freeSpins > 0) return;
+        this.betIndex = Math.max(0, Math.min(BET_LEVELS.length - 1, this.betIndex + dir));
+        document.getElementById('bet-val').textContent = this.bet;
+        sfx.blip(600, 0.03);
+    }
+
+    /* ---------- 스핀 ---------- */
+
+    async spin() {
+        if (this.spinning) return;
+
+        const paying = this.freeSpins === 0;
+        if (paying && this.credits < this.bet) {
+            this.offerRefill();
+            return;
+        }
+
+        this.spinning = true;
+        document.getElementById('spin-btn').disabled = true;
+        this.clearWinVisuals();
+        this.setStat('win', 0);
+
+        if (paying) {
+            this.credits -= this.bet;
+            this.setStat('credit', this.credits);
+        } else {
+            this.freeSpins--;
+            this.updateFreeBadge();
+        }
+        this.setMsg(paying ? '돌리는 중...' : '프리스핀!', paying ? 'Spinning...' : 'Free spin!');
+
+        // 각 릴의 최종 정지 위치를 먼저 정합니다(연출은 그 위를 달릴 뿐입니다).
+        const finalPos = this.strips.map(strip => (Math.random() * strip.length) | 0);
+
+        // 스캐터가 몇 개 걸릴지 미리 알면, 마지막 릴을 느리게 세워 긴장을 줄 수 있습니다.
+        const scatterCount = finalPos.reduce((n, p, r) => {
+            const strip = this.strips[r];
+            for (let row = 0; row < ROWS_VISIBLE; row++) {
+                if (SYM_BY_ID[strip[(p + row) % strip.length]].scatter) return n + 1;
+            }
+            return n;
+        }, 0);
+
+        for (let r = 0; r < REEL_COUNT; r++) {
+            // 앞선 릴에서 스캐터가 2개 이상 나왔으면 이 릴을 길게 굴립니다.
+            let anticipate = false;
+            if (r >= 2) {
+                let sofar = 0;
+                for (let k = 0; k < r; k++) {
+                    const strip = this.strips[k];
+                    for (let row = 0; row < ROWS_VISIBLE; row++) {
+                        if (SYM_BY_ID[strip[(finalPos[k] + row) % strip.length]].scatter) { sofar++; break; }
+                    }
+                }
+                anticipate = sofar >= 2;
+            }
+            const dur = 620 + r * 260 + (anticipate ? 900 : 0);
+            this.startReel(r, finalPos[r], dur);
+            if (anticipate) this.setMsg('...?!', 'Anticipation!');
+            await this.wait(anticipate ? 260 : 130);
+        }
+
+        // 마지막 릴이 멈출 때까지
+        await this.wait(1500);
+        while (this.reelEls.some(el => el.classList.contains('spinning'))) await this.wait(60);
+
+        if (!this.running) return;
+        this.evaluate(scatterCount);
+    }
+
+    wait(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+    /**
+     * 릴 하나를 굴립니다. 스트립을 실제로 훑어 내리는 게 아니라, 매 프레임 pos 를
+     * 진행시키고 남은 거리를 easing 으로 줄여 자연스럽게 멈추게 합니다.
+     */
+    startReel(r, target, duration) {
+        const el = this.reelEls[r];
+        el.classList.add('spinning');
+        const strip = this.strips[r];
+        const start = performance.now();
+        const startPos = this.pos[r];
+        // 최소 몇 바퀴는 돌게 해서 "빙글빙글" 느낌을 냅니다.
+        const loops = 4 + r;
+        const total = loops * strip.length + (((target - startPos) % strip.length) + strip.length) % strip.length;
+
+        const tick = (now) => {
+            if (!this.running) return;
+            const t = Math.min(1, (now - start) / duration);
+            // 뒤로 갈수록 급격히 느려지는 감속
+            const eased = 1 - Math.pow(1 - t, 3);
+            this.pos[r] = Math.round(startPos + total * eased) % strip.length;
+            this.renderOne(r);
+            if (t < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                this.pos[r] = target;
+                this.renderOne(r);
+                el.classList.remove('spinning');
+                sfx.blip(300 + r * 60, 0.05, 'square', 0.04);
+                vibe(10);
+            }
+        };
+        requestAnimationFrame(tick);
+    }
+
+    renderOne(r) {
+        const strip = this.strips[r];
+        const cells = this.stripEls[r].querySelectorAll('.sym');
+        cells.forEach((el, i) => {
+            const id = strip[(((this.pos[r] + i - 1) % strip.length) + strip.length) % strip.length];
+            el.textContent = SYM_BY_ID[id].ch;
+        });
+    }
+
+    /* ---------- 당첨 판정 ---------- */
+
+    evaluate(scatterCount) {
+        const grid = this.visibleGrid();
+        const mult = this.bonusActive ? this.bonusMult : 1;
+        let total = 0;
+        const winningLines = [];
+
+        PAYLINES.forEach((line, li) => {
+            const ids = line.rows.map((row, r) => grid[r][row]);
+            let base = ids.find(id => id !== 'wild' && id !== 'chili');
+            if (!base) base = ids[0];
+            if (base === 'chili') return;
+
+            let count = 0;
+            for (const id of ids) {
+                if (id === base || id === 'wild') count++;
+                else break;
+            }
+            if (count >= 3) {
+                const pay = SYM_BY_ID[base].pay[count - 1] * (this.bet / 10) * mult;
+                if (pay > 0) {
+                    total += pay;
+                    winningLines.push({ li, line, count, pay, base });
+                }
+            }
+        });
+
+        total = Math.round(total);
+
+        /* ---------- 보너스 라운드 중에만 붙는 추가 혜택 ---------- */
+        let bonusNotes = [];
+        if (this.bonusActive) {
+            // 💋 가 나온 스핀마다 배수 +1 (최대 x10).
+            // 심볼 개수만큼 올리면 서너 스핀 만에 상한을 찍어 나머지가 심심해집니다.
+            let lips = 0;
+            grid.forEach(col => col.forEach(id => { if (id === 'lips') lips++; }));
+            if (lips > 0 && this.bonusMult < BONUS_MAX_MULT) {
+                const before = this.bonusMult;
+                this.bonusMult = Math.min(BONUS_MAX_MULT, this.bonusMult + 1);
+                bonusNotes.push(`💋 배수 x${before} → x${this.bonusMult}`);
+            }
+
+            // 🔥 는 그 자리에 고정되어 남은 스핀 내내 유지.
+            // 상한이 없으면 판의 절반이 와일드가 되어 매 스핀 전 라인이 터집니다.
+            grid.forEach((col, r) => col.forEach((id, row) => {
+                if (id === 'wild' &&
+                    this.stickyWilds.length < BONUS_MAX_STICKY &&
+                    !this.stickyWilds.some(w => w.r === r && w.row === row)) {
+                    this.stickyWilds.push({ r, row });
+                }
+            }));
+            this.paintSticky();
+
+            // 💃 호스티스가 나오면 즉석 팁
+            let dancers = 0;
+            grid.forEach(col => col.forEach(id => { if (id === 'dancer') dancers++; }));
+            if (dancers > 0) {
+                const tip = dancers * this.bet * 3;
+                total += tip;
+                bonusNotes.push(`💃 호스티스 팁 +${tip}`);
+            }
+
+            // 🌶️ 3개 이상이면 스핀 추가 (리트리거). 2개로 두면 거의 매번 걸려
+            // 라운드가 끝나지 않습니다. 남은 스핀에도 상한을 둡니다.
+            if (scatterCount >= 3 && this.freeSpins < BONUS_MAX_SPINS) {
+                this.freeSpins = Math.min(BONUS_MAX_SPINS, this.freeSpins + 5);
+                bonusNotes.push('🌶️ 스핀 +5 추가!');
+            }
+
+            this.bonusTotal += total;
+        }
+
+        // 기본 게임에서 🌶️ 3개 → 보너스 시작
+        const triggered = !this.bonusActive && scatterCount >= 3;
+
+        if (total > 0) {
+            this.credits += total;
+            this.setStat('credit', this.credits);
+            this.setStat('win', total);
+            this.showWinLines(winningLines, grid);
+            if (total > this.score) {
+                this.score = total;
+                store.setBest(this.id, total);
+                this.setStat('bestval', store.best(this.id));
+            }
+        }
+
+        this.saveCredits();
+        this.updateFreeBadge();
+
+        const bigThreshold = this.bet * 20;
+        if (total >= bigThreshold && total > 0) {
+            this.showBigWin(total);
+        } else if (bonusNotes.length) {
+            this.setMsg(bonusNotes.join(' · '), `+${total}`);
+            sfx.good();
+            vibe([0, 40, 40, 40]);
+        } else if (total > 0) {
+            this.setMsg(`+${total} 크레딧!`, `You won ${total} credits!`);
+            sfx.good();
+            vibe([0, 40, 40, 40]);
+        } else if (!triggered) {
+            this.setMsg('아쉽네요. 한 번 더!', 'So close. Spin again!');
+        }
+
+        this.spinning = false;
+        document.getElementById('spin-btn').disabled = false;
+
+        if (triggered) {
+            this.startBonus();
+            return;
+        }
+
+        // 보너스가 끝났으면 정산 화면
+        if (this.bonusActive && this.freeSpins === 0) {
+            this.endBonus();
+            return;
+        }
+
+        // 보너스 중이면 자동으로 다음 스핀
+        if (this.bonusActive && this.freeSpins > 0) {
+            setTimeout(() => { if (this.running && this.bonusActive) this.spin(); }, 1400);
+            return;
+        }
+
+        if (this.credits < this.bet) this.offerRefill();
+    }
+
+    /* ---------- 🌶️ 스파이시 보너스 ---------- */
+
+    /** 🌶️ 3개 — 화려하게 열고 프리스핀을 시작합니다. */
+    startBonus() {
+        this.bonusActive = true;
+        this.freeSpins = 10;
+        this.bonusMult = 2;
+        this.stickyWilds = [];
+        this.bonusTotal = 0;
+
+        document.getElementById('spin-btn').disabled = true;
+        this.showBonusIntro();
+        this.updateFreeBadge();
+
+        sfx.good();
+        setTimeout(() => sfx.good(), 160);
+        setTimeout(() => sfx.good(), 320);
+        setTimeout(() => sfx.good(), 480);
+        vibe([0, 90, 60, 90, 60, 90, 60, 160]);
+
+        setTimeout(() => {
+            if (!this.running) return;
+            this.screen.querySelector('.bonus-intro')?.remove();
+            this.spin();
+        }, 2600);
+    }
+
+    showBonusIntro() {
+        const frame = document.getElementById('reels-frame');
+        const el = document.createElement('div');
+        el.className = 'bonus-intro';
+        // 💋🔥🍸 를 흩뿌려 화려하게 — 위치·지연을 조금씩 달리해 한꺼번에 튀지 않게 합니다.
+        const confetti = Array.from({ length: 18 }, (_, i) => {
+            const ch = ['💋', '🔥', '🍸', '🌶️', '💃', '👯', '💎'][i % 7];
+            const left = (i * 5.6 + (i % 3) * 4) % 96;
+            const delay = (i % 9) * 0.12;
+            return `<span class="bi-confetti" style="left:${left}%;animation-delay:${delay}s">${ch}</span>`;
+        }).join('');
+        el.innerHTML =
+            `<div class="bi-confetti-layer">${confetti}</div>` +
+            `<div class="bi-core">` +
+            `<div class="bi-chilis">🌶️🌶️🌶️</div>` +
+            `<div class="bi-title">SPICY BONUS</div>` +
+            `<div class="bi-kr">스파이시 보너스!</div>` +
+            `<div class="bi-sub">프리스핀 10회 · 배수 x2 시작<br>10 free spins · starts at x2</div>` +
+            `</div>`;
+        frame.appendChild(el);
+    }
+
+    /** 보너스가 끝나면 총 획득액을 보여주고 기본 게임으로 돌아갑니다. */
+    endBonus() {
+        const won = Math.round(this.bonusTotal);
+        const frame = document.getElementById('reels-frame');
+        const el = document.createElement('div');
+        el.className = 'bigwin';
+        el.innerHTML =
+            `<div class="bigwin-title">BONUS OVER</div>` +
+            `<div class="bigwin-amount">+${won}</div>` +
+            `<div class="bigwin-kr">보너스에서 ${won} 크레딧 획득!</div>`;
+        frame.appendChild(el);
+        sfx.good();
+        vibe([0, 80, 60, 140]);
+        this.setMsg(`🌶️ 보너스 종료 · 총 +${won}`, `Bonus over — you won ${won} credits`);
+
+        setTimeout(() => {
+            el.remove();
+            this.resetBonus();
+            this.clearWinVisuals();
+            this.updateFreeBadge();
+            document.getElementById('spin-btn').disabled = false;
+            if (this.credits < this.bet) this.offerRefill();
+        }, 2600);
+    }
+
+    get freeSpinsActive() { return this.freeSpins > 0; }
+
+    showWinLines(wins, grid) {
+        // 당첨 심볼 강조
+        wins.forEach(w => {
+            for (let r = 0; r < w.count; r++) {
+                const row = w.line.rows[r];
+                const cell = this.stripEls[r].querySelectorAll('.sym')[row + 1];
+                if (cell) cell.classList.add('win');
+            }
+        });
+
+        // 페이라인 긋기
+        const layer = document.getElementById('payline-layer');
+        const frame = document.getElementById('reels-frame');
+        const w = frame.clientWidth - 16;
+        const h = frame.clientHeight - 16;
+        const colW = w / REEL_COUNT;
+        const rowH = h / ROWS_VISIBLE;
+        const paths = wins.map(win => {
+            const pts = win.line.rows
+                .slice(0, win.count)
+                .map((row, r) => `${(r + 0.5) * colW},${(row + 0.5) * rowH}`)
+                .join(' L');
+            return `<path class="payline-path" style="color:${win.line.color};stroke:${win.line.color}" d="M${pts}"/>`;
+        }).join('');
+        layer.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${paths}</svg>`;
+    }
+
+    clearWinVisuals() {
+        document.getElementById('payline-layer').innerHTML = '';
+        this.stripEls?.forEach(strip =>
+            strip.querySelectorAll('.sym.win').forEach(el => el.classList.remove('win')));
+        const old = this.screen.querySelector('.bigwin');
+        if (old) old.remove();
+    }
+
+    showBigWin(amount) {
+        const frame = document.getElementById('reels-frame');
+        const el = document.createElement('div');
+        el.className = 'bigwin';
+        const mega = amount >= this.bet * 60;
+        el.innerHTML =
+            `<div class="bigwin-title">${mega ? 'MEGA WIN' : 'BIG WIN'}</div>` +
+            `<div class="bigwin-amount">+${amount}</div>` +
+            `<div class="bigwin-kr">${mega ? '대박이 터졌습니다!' : '크게 터졌습니다!'}</div>`;
+        frame.appendChild(el);
+        sfx.good();
+        setTimeout(() => sfx.good(), 180);
+        setTimeout(() => sfx.good(), 360);
+        vibe([0, 80, 60, 80, 60, 140]);
+        this.setMsg(`+${amount} 크레딧!`, `You won ${amount} credits!`);
+        setTimeout(() => el.remove(), 2400);
+    }
+
+    /** 크레딧이 떨어지면 무료로 다시 채웁니다 — 결제는 없습니다. */
+    offerRefill() {
+        this.setMsg('크레딧이 떨어졌어요. 무료로 충전하세요.', 'Out of credits — refill for free.');
+        const btn = document.getElementById('spin-btn');
+        btn.disabled = false;
+        btn.textContent = '무료 충전 · Free refill';
+        const refill = () => {
+            this.credits = 1000;
+            this.saveCredits();
+            this.setStat('credit', this.credits);
+            btn.textContent = 'SPIN · 돌리기';
+            btn.removeEventListener('click', refill);
+            this.setMsg('충전 완료! 행운을 빌어요.', 'Refilled. Good luck!');
+            sfx.good();
+        };
+        btn.addEventListener('click', refill, { once: true });
+    }
+}
+
+const games = {
+    slots: new Slots(),
+    block: new BlockDrop(),
+    shoot: new SpaceShooter(),
+    snake: new Snake(),
+    brick: new BrickBreaker()
+};
+
+let current = null;
+
+function refreshBests() {
+    document.querySelectorAll('[data-best]').forEach(el => {
+        el.textContent = 'BEST ' + store.best(el.getAttribute('data-best'));
+    });
+}
+
+function show(id, isBack = false) {
+    const target = id === 'menu' ? document.getElementById('scr-menu') : games[id].screen;
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active');
+        s.classList.add('hidden');
+    });
+    target.classList.remove('hidden');
+    target.classList.add('active');
+
+    if (current && games[current]) games[current].exit();
+    current = id === 'menu' ? null : id;
+
+    if (current) {
+        // 화면이 보이게 된 뒤에 크기를 재야 getBoundingClientRect 가 0 이 아닙니다.
+        requestAnimationFrame(() => games[current].enter());
+    } else {
+        refreshBests();
+    }
+
+    if (!isBack) history.pushState({ screen: id }, '');
+}
+
+document.querySelectorAll('[data-go]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        sfx.init();
+        show(btn.getAttribute('data-go'));
+    });
+});
+
+document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => history.back());
+});
+
+window.addEventListener('popstate', (e) => {
+    show(e.state?.screen || 'menu', true);
+});
+
+// 화면 크기가 바뀌면(회전 등) 캔버스를 다시 잡습니다.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (current && games[current]) {
+            games[current].resize();
+            games[current].draw();
+        }
+    }, 150);
+});
+
+// 앱을 백그라운드로 보내면 게임을 멈춥니다 — 안 보이는 곳에서 목숨이 깎이면 안 됩니다.
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && current && games[current]) {
+        const g = games[current];
+        if (g.running && !g.over) {
+            g.running = false;
+            if (g.raf) cancelAnimationFrame(g.raf);
+            g.showOverlay(`
+                <div class="ov-title">PAUSED</div>
+                <div class="ov-kr">일시정지</div>
+                <div class="ov-score">${g.score}</div>
+                <button class="ov-btn">계속하기 · Resume</button>
+            `);
+            // 기본 begin() 은 점수를 0으로 되돌리므로, 여기서는 이어서 하도록 바꿉니다.
+            const btn = g.overlay.querySelector('.ov-btn');
+            btn.onclick = () => {
+                g.hideOverlay();
+                g.running = true;
+                g.last = performance.now();
+                const loop = (t) => {
+                    if (!g.running) return;
+                    const dt = Math.min((t - g.last) / 1000, 0.05);
+                    g.last = t;
+                    g.update(dt);
+                    g.draw();
+                    if (g.running) g.raf = requestAnimationFrame(loop);
+                };
+                g.raf = requestAnimationFrame(loop);
+            };
+        }
+    }
+});
+
+/* HOT 테마 토글 — 켜고 끄면 body 클래스만 갈아끼우면 CSS 가 알아서 바뀝니다.
+   지금 게임 중이면 다음 프레임에 캔버스 색도 따라옵니다. */
+const hotSw = document.getElementById('hot-sw');
+const menuSub = document.getElementById('menu-sub');
+
+function paintHot() {
+    document.body.classList.toggle('hot', HOT.on);
+    hotSw.classList.toggle('on', HOT.on);
+    hotSw.setAttribute('aria-checked', HOT.on ? 'true' : 'false');
+    menuSub.innerHTML = HOT.on
+        ? '오늘 밤은 좀 뜨겁게 🔥<br>Turn the night up'
+        : '비행기·대기 시간용 오프라인 게임<br>Offline games for flights &amp; waiting';
+}
+
+hotSw.addEventListener('click', () => {
+    HOT.on = !HOT.on;
+    localStorage.setItem('gijoArcade_hot', HOT.on ? '1' : '0');
+    paintHot();
+    sfx.init();
+    sfx.blip(HOT.on ? 880 : 420, 0.07);
+    vibe(15);
+    // 메뉴에 있을 때는 다시 그릴 캔버스가 없고, 게임 중이면 루프가 알아서 반영합니다.
+    if (current && games[current] && !games[current].running) games[current].draw();
+});
+
+paintHot();
+
+history.replaceState({ screen: 'menu' }, '');
+refreshBests();
+</script>
+</body>
+</html>
