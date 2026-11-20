@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>GIJO Arcade</title>
+    <!-- 홈 화면에 추가(설치)와 오프라인 실행 -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GIJO Arcade">
     <meta name="theme-color" content="#0a0a0c">
     <!-- 파티 게임(gijo-drink.html)과 같은 이유로 폰트를 렌더링 차단 없이 받습니다.
          현지 데이터가 느려 폰트 요청이 걸려도 게임은 그대로 실행돼야 합니다. -->
@@ -7884,6 +7892,12 @@ const deepLink = (location.hash.match(/^#play=([a-z0-9]+)$/) || [])[1];
 history.replaceState({ screen: 'menu' }, '', location.pathname + location.search);
 refreshBests();
 if (deepLink && games[deepLink]) show(deepLink);
+</script>
+<script>
+// 서비스 워커 등록 — 한 번 열어 두면 인터넷 없이도 실행된다(sw.js 참고).
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
 </script>
 </body>
 </html>
