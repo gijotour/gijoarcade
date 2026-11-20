@@ -1597,6 +1597,62 @@ canvas {
     font-size: 0.7rem;
 }
 
+.memory-portal-item .portal-item-icon {
+    border-color: rgba(168, 85, 247, 0.48);
+    background: linear-gradient(145deg, rgba(168, 85, 247, 0.22), rgba(0, 243, 255, 0.1));
+}
+
+.memory-screen {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+.memory-screen canvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.memory-wrap {
+    margin: 0 6px 8px;
+}
+
+.memory-hint {
+    padding: 0 12px 8px;
+    font-size: 0.72rem;
+}
+
+.pop-portal-item .portal-item-icon {
+    border-color: rgba(0, 243, 255, 0.48);
+    background: linear-gradient(145deg, rgba(0, 243, 255, 0.22), rgba(255, 77, 109, 0.12));
+}
+
+.pop-screen {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+.pop-screen canvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.pop-wrap {
+    margin: 0 6px 8px;
+}
+
+.pop-hint {
+    padding: 0 12px 8px;
+    font-size: 0.7rem;
+}
+
 </style>
 </head>
 <body>
@@ -1733,6 +1789,34 @@ canvas {
                             <span class="portal-best-pill" data-best="mines">BEST 0</span>
                         </span>
                         <span class="portal-item-desc">숫자를 단서로 숨은 지뢰를 피해 칸 열기</span>
+                    </span>
+                    <span class="portal-item-arrow">&#8594;</span>
+                </button>
+            </div>
+
+            <div class="portal-item memory-portal-item">
+                <button class="portal-item-main" data-go="memory" aria-label="패턴 기억 · Neon Memory">
+                    <span class="portal-item-icon">🧠</span>
+                    <span class="portal-item-texts">
+                        <span class="portal-item-title-row">
+                            <span class="portal-item-title">패턴 기억</span>
+                            <span class="portal-best-pill" data-best="memory">BEST 0</span>
+                        </span>
+                        <span class="portal-item-desc">반짝이는 네온 패드 순서를 기억해 따라 누르기</span>
+                    </span>
+                    <span class="portal-item-arrow">&#8594;</span>
+                </button>
+            </div>
+
+            <div class="portal-item pop-portal-item">
+                <button class="portal-item-main" data-go="pop" aria-label="컬러 팝 · Neon Pop">
+                    <span class="portal-item-icon">🫧</span>
+                    <span class="portal-item-texts">
+                        <span class="portal-item-title-row">
+                            <span class="portal-item-title">컬러 팝</span>
+                            <span class="portal-best-pill" data-best="pop">BEST 0</span>
+                        </span>
+                        <span class="portal-item-desc">같은 색 2개 이상 묶음을 탭해 한꺼번에 지우기</span>
                     </span>
                     <span class="portal-item-arrow">&#8594;</span>
                 </button>
@@ -1935,6 +2019,39 @@ canvas {
             <button type="button" class="mines-flag-btn" id="mines-flag-btn" aria-pressed="false">🚩 깃발 모드: 꺼짐 · Tap to Open</button>
         </div>
         <p class="hint mines-hint">탭 = 열기 · 길게 누르기/깃발 모드 = 깃발 · 숫자 탭 = 주변 열기</p>
+    </section>
+
+    <!-- ===== 패턴 기억 릴레이 ===== -->
+    <section id="scr-memory" class="screen hidden game-screen memory-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap memory-wrap">
+            <canvas id="cv-memory"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint memory-hint">반짝이는 순서를 기억해 같은 순서로 누르세요 · Watch &amp; repeat the neon pattern</p>
+    </section>
+
+    <!-- ===== 네온 컬러 팝 ===== -->
+    <section id="scr-pop" class="screen hidden game-screen pop-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Left</span><span class="stat-val" data-left>80</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap pop-wrap">
+            <canvas id="cv-pop"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint pop-hint">같은 색 2개 이상 탭 = 제거 · 빈 줄은 왼쪽 정렬 · 0개 보너스 +500<br>Tap 2+ matching tiles to pop · Clear all for +500 bonus</p>
     </section>
 
 </div>
@@ -6450,6 +6567,1101 @@ class NeonMines extends Game {
 }
 
 
+/* ============================================================
+   10) Neon Memory — 패턴 기억 릴레이
+   ============================================================ */
+
+const MEMORY_PADS = [
+    { id: 0, symbol: '▲', shape: 'tri',     color: '#00f3ff', lit: '#cffafe', dim: '#0c2738', freq: 523.25 },
+    { id: 1, symbol: '●', shape: 'circle',  color: '#ff4d6d', lit: '#ffe4e6', dim: '#38101e', freq: 659.25 },
+    { id: 2, symbol: '■', shape: 'square',  color: '#34d399', lit: '#d1fae5', dim: '#0d2e24', freq: 783.99 },
+    { id: 3, symbol: '◆', shape: 'diamond', color: '#fbbf24', lit: '#fef3c7', dim: '#36270a', freq: 1046.5 }
+];
+
+class NeonMemory extends Game {
+    constructor() {
+        super('memory', 'scr-memory', 'cv-memory');
+        this.titleEn = 'Neon Memory';
+        this.titleKr = '패턴 기억 릴레이';
+        this.introHint = '네온 패드(▲ ● ■ ◆)가 반짝이는 순서를 기억해 똑같이 누르세요.<br>Watch the glowing pads and repeat the exact sequence.';
+        this._lastTouch = 0;
+        this._timers = new Set();
+        this.padRects = [];
+    }
+
+    clearTimers() {
+        this._timers.forEach((id) => clearTimeout(id));
+        this._timers.clear();
+    }
+
+    showOnDuration(round) {
+        return Math.max(0.24, 0.56 - (round - 1) * 0.025);
+    }
+
+    showGapDuration(round) {
+        return Math.max(0.12, 0.22 - (round - 1) * 0.008);
+    }
+
+    onResize() {
+        this.headerH = Math.max(66, Math.min(84, Math.round(this.H * 0.16)));
+        const sidePad = 14;
+        const botPad = 18;
+        const availW = Math.max(120, this.W - sidePad * 2);
+        const availH = Math.max(120, this.H - this.headerH - botPad);
+        const boardSize = Math.min(availW, availH, 380);
+        const gap = Math.max(12, Math.round(boardSize * 0.055));
+        const padSize = Math.floor((boardSize - gap) / 2);
+        const total = padSize * 2 + gap;
+        const gridX = Math.floor((this.W - total) / 2);
+        const gridY = Math.floor(this.headerH + (availH - total) * 0.46);
+
+        this.gap = gap;
+        this.padSize = padSize;
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.boardTotal = total;
+        this.padRects = [
+            { x: gridX,               y: gridY,               size: padSize, cx: gridX + padSize / 2,               cy: gridY + padSize / 2 },
+            { x: gridX + padSize + gap, y: gridY,               size: padSize, cx: gridX + padSize + gap + padSize / 2, cy: gridY + padSize / 2 },
+            { x: gridX,               y: gridY + padSize + gap, size: padSize, cx: gridX + padSize / 2,               cy: gridY + padSize + gap + padSize / 2 },
+            { x: gridX + padSize + gap, y: gridY + padSize + gap, size: padSize, cx: gridX + padSize + gap + padSize / 2, cy: gridY + padSize + gap + padSize / 2 }
+        ];
+    }
+
+    reset() {
+        this.clearTimers();
+        this.onResize();
+        this.sequence = [];
+        this.score = 0;
+        this.bestAtStart = store.best(this.id);
+        this.phase = 'idle';
+        this.phaseTimer = 0;
+        this.showIndex = 0;
+        this.inputIndex = 0;
+        this.activePad = -1;
+        this.wrongPad = -1;
+        this.expectedPad = -1;
+        this.clearChimePlayed = false;
+        this.padGlow = [0, 0, 0, 0];
+        this.padScale = [0, 0, 0, 0];
+        this.padTapTimer = [0, 0, 0, 0];
+        this.rings = [];
+        this.particles = [];
+        this.shakeTime = 0;
+        this.setStat('score', 0);
+        this.setStat('bestval', this.bestAtStart);
+    }
+
+    begin() {
+        super.begin();
+        this.sequence = [Math.floor(Math.random() * MEMORY_PADS.length)];
+        this.showIndex = 0;
+        this.inputIndex = 0;
+        this.phase = 'ready';
+        this.phaseTimer = 0.45;
+    }
+
+    exit() {
+        this.clearTimers();
+        if (!this.over && this.score > 0) store.setBest(this.id, this.score);
+        this.phase = 'idle';
+        this.phaseTimer = 0;
+        this.activePad = -1;
+        this.wrongPad = -1;
+        this.expectedPad = -1;
+        if (this.padTapTimer) this.padTapTimer.fill(0);
+        if (this.padGlow) this.padGlow.fill(0);
+        if (this.padScale) this.padScale.fill(0);
+        this.rings = [];
+        super.exit();
+    }
+
+    spawnRing(padIdx, color) {
+        const r = this.padRects[padIdx];
+        if (!r) return;
+        this.rings.push({
+            cx: r.cx,
+            cy: r.cy,
+            size: r.size,
+            expand: 0,
+            alpha: 0.95,
+            color: color || MEMORY_PADS[padIdx].color
+        });
+    }
+
+    flashShowPad(padIdx) {
+        const pad = MEMORY_PADS[padIdx];
+        const round = this.sequence.length;
+        const onDur = this.showOnDuration(round);
+        this.activePad = padIdx;
+        this.phase = 'show_on';
+        this.phaseTimer = onDur;
+        this.padGlow[padIdx] = 1;
+        this.padScale[padIdx] = 1;
+        this.spawnRing(padIdx, pad.color);
+        sfx.blip(pad.freq, Math.min(0.24, onDur * 0.7), 'triangle', 0.065);
+    }
+
+    padAt(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        for (let i = 0; i < this.padRects.length; i++) {
+            const r = this.padRects[i];
+            if (x >= r.x && x <= r.x + r.size && y >= r.y && y <= r.y + r.size) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    tapPad(padIdx) {
+        if (!this.running || this.over || this.phase !== 'input') return;
+        if (padIdx < 0 || padIdx >= MEMORY_PADS.length) return;
+
+        const pad = MEMORY_PADS[padIdx];
+        const r = this.padRects[padIdx];
+        const expected = this.sequence[this.inputIndex];
+
+        if (padIdx === expected) {
+            this.padTapTimer[padIdx] = 0.24;
+            this.padGlow[padIdx] = 1;
+            this.padScale[padIdx] = 1;
+            this.spawnRing(padIdx, pad.color);
+            if (r) this.addSpark(r.cx, r.cy, pad.color, 10, 3.2);
+            sfx.blip(pad.freq, 0.16, 'triangle', 0.065);
+            vibe(14);
+            this.inputIndex += 1;
+
+            if (this.inputIndex >= this.sequence.length) {
+                this.score += 1;
+                this.setStat('score', this.score);
+                this.setStat('bestval', Math.max(this.bestAtStart, this.score));
+                this.phase = 'round_clear';
+                this.phaseTimer = 0.72;
+                this.clearChimePlayed = false;
+            }
+        } else {
+            this.wrongPad = padIdx;
+            this.expectedPad = expected;
+            this.phase = 'fail';
+            this.phaseTimer = 0.58;
+            this.padGlow[padIdx] = 1;
+            this.padScale[padIdx] = 0.6;
+            if (r) this.addSpark(r.cx, r.cy, '#ff4d6d', 18, 4.5);
+            this.triggerShake(8, 0.3);
+            sfx.hit();
+        }
+    }
+
+    bindInput() {
+        this.on(this.screen, 'contextmenu', (e) => { e.preventDefault(); });
+        this.on(this.screen, 'selectstart', (e) => { e.preventDefault(); });
+
+        this.on(this.canvas, 'touchstart', (e) => {
+            this._lastTouch = performance.now();
+            e.preventDefault();
+            if (!this.running || this.over || this.phase !== 'input') return;
+            if (e.touches.length !== 1) return;
+            sfx.init();
+            const t = e.touches[0];
+            const idx = this.padAt(t.clientX, t.clientY);
+            if (idx >= 0) this.tapPad(idx);
+        }, { passive: false });
+
+        this.on(this.canvas, 'mousedown', (e) => {
+            if (performance.now() - this._lastTouch < 500) return;
+            if (e.button !== 0) return;
+            if (!this.running || this.over || this.phase !== 'input') return;
+            sfx.init();
+            const idx = this.padAt(e.clientX, e.clientY);
+            if (idx >= 0) this.tapPad(idx);
+        });
+
+        const keyMap = { '1': 0, 'q': 0, 'Q': 0, '2': 1, 'w': 1, 'W': 1, '3': 2, 'a': 2, 'A': 2, '4': 3, 's': 3, 'S': 3 };
+        this.on(window, 'keydown', (e) => {
+            if (!this.running || this.over || e.repeat || this.phase !== 'input') return;
+            if (e.key in keyMap) {
+                e.preventDefault();
+                sfx.init();
+                this.tapPad(keyMap[e.key]);
+            }
+        });
+    }
+
+    update(dt) {
+        this.updateFx(dt);
+
+        // 상태 머신 진행 (모든 타이밍은 dt 기준)
+        if (this.phase === 'ready') {
+            this.phaseTimer -= dt;
+            if (this.phaseTimer <= 0) {
+                this.showIndex = 0;
+                this.flashShowPad(this.sequence[0]);
+            }
+        } else if (this.phase === 'show_on') {
+            this.phaseTimer -= dt;
+            if (this.phaseTimer <= 0) {
+                this.activePad = -1;
+                this.showIndex += 1;
+                if (this.showIndex < this.sequence.length) {
+                    this.phase = 'show_gap';
+                    this.phaseTimer = this.showGapDuration(this.sequence.length);
+                } else {
+                    this.phase = 'input';
+                    this.inputIndex = 0;
+                }
+            }
+        } else if (this.phase === 'show_gap') {
+            this.phaseTimer -= dt;
+            if (this.phaseTimer <= 0) {
+                this.flashShowPad(this.sequence[this.showIndex]);
+            }
+        } else if (this.phase === 'round_clear') {
+            this.phaseTimer -= dt;
+            if (!this.clearChimePlayed && this.phaseTimer <= 0.46) {
+                this.clearChimePlayed = true;
+                sfx.good();
+                vibe(18);
+                this.addPopupText(`ROUND ${this.score} CLEAR!`, this.W / 2, this.gridY - 8, '#ffd700');
+                this.addSpark(this.W / 2, this.gridY + this.boardTotal / 2, '#ffd700', 14, 3.6);
+            }
+            if (this.phaseTimer <= 0) {
+                this.sequence.push(Math.floor(Math.random() * MEMORY_PADS.length));
+                this.showIndex = 0;
+                this.inputIndex = 0;
+                this.flashShowPad(this.sequence[0]);
+            }
+        } else if (this.phase === 'fail') {
+            this.phaseTimer -= dt;
+            if (this.phaseTimer <= 0) {
+                this.gameOver();
+                return;
+            }
+        }
+
+        // 패드 밝기·크기 애니메이션 (dt 기준, 같은 패드 연속 시 꺼짐이 뚜렷하도록 빠른 감쇠)
+        for (let i = 0; i < 4; i++) {
+            if (this.padTapTimer[i] > 0) {
+                this.padTapTimer[i] = Math.max(0, this.padTapTimer[i] - dt);
+            }
+            const isLit = (this.phase === 'show_on' && this.activePad === i)
+                || this.padTapTimer[i] > 0
+                || (this.phase === 'fail' && this.expectedPad === i && Math.sin(this.phaseTimer * 26) > 0);
+
+            if (isLit) {
+                this.padGlow[i] = Math.min(1, this.padGlow[i] + 20 * dt);
+                this.padScale[i] = Math.min(1, this.padScale[i] + 20 * dt);
+            } else {
+                this.padGlow[i] = Math.max(0, this.padGlow[i] - 16 * dt);
+                this.padScale[i] = Math.max(0, this.padScale[i] - 16 * dt);
+            }
+        }
+
+        // 네온 파동 링 (dt 기준)
+        for (let i = this.rings.length - 1; i >= 0; i--) {
+            const rg = this.rings[i];
+            rg.expand += 68 * dt;
+            rg.alpha -= 2.4 * dt;
+            if (rg.alpha <= 0) this.rings.splice(i, 1);
+        }
+    }
+
+    roundPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+    }
+
+    drawSymbol(ctx, shape, cx, cy, r) {
+        ctx.beginPath();
+        if (shape === 'tri') {
+            ctx.moveTo(cx, cy - r * 0.92);
+            ctx.lineTo(cx + r * 0.96, cy + r * 0.74);
+            ctx.lineTo(cx - r * 0.96, cy + r * 0.74);
+            ctx.closePath();
+        } else if (shape === 'circle') {
+            ctx.arc(cx, cy, r * 0.84, 0, Math.PI * 2);
+        } else if (shape === 'square') {
+            const s = r * 1.54;
+            this.roundPath(ctx, cx - s / 2, cy - s / 2, s, s, r * 0.22);
+        } else {
+            ctx.moveTo(cx, cy - r * 0.98);
+            ctx.lineTo(cx + r * 0.92, cy);
+            ctx.lineTo(cx, cy + r * 0.98);
+            ctx.lineTo(cx - r * 0.92, cy);
+            ctx.closePath();
+        }
+    }
+
+    drawStatusHeader(ctx) {
+        const round = Math.max(1, this.sequence.length);
+        let text = `ROUND ${round} · 준비 · Ready`;
+        let accent = '#94a3b8';
+
+        if (this.phase === 'ready' || this.phase === 'show_on' || this.phase === 'show_gap') {
+            const step = Math.min(round, this.showIndex + (this.phase === 'show_on' ? 1 : 0));
+            text = `🔒 ROUND ${round} · 보기 · Watch (${step}/${round})`;
+            accent = '#38bdf8';
+        } else if (this.phase === 'input') {
+            text = `👆 ROUND ${round} · 따라 누르기 · Your Turn`;
+            accent = '#34d399';
+        } else if (this.phase === 'round_clear') {
+            text = `✨ ROUND ${this.score} CLEAR! · 통과`;
+            accent = '#ffd700';
+        } else if (this.phase === 'fail') {
+            text = `✕ 오답 · Wrong Pad`;
+            accent = '#ff4d6d';
+        }
+
+        const pillY = Math.round(this.headerH * 0.36);
+        ctx.save();
+        ctx.font = `800 13px ${UI_FONT}`;
+        const tw = ctx.measureText(text).width;
+        const pillW = Math.min(this.W - 24, tw + 26);
+        const pillH = 28;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = accent;
+        ctx.shadowBlur = 10;
+        this.roundPath(ctx, (this.W - pillW) / 2, pillY - pillH / 2, pillW, pillH, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, this.W / 2, pillY + 0.5);
+        ctx.restore();
+
+        // 진행 점 / 바
+        const total = this.sequence.length;
+        if (total <= 0) return;
+        const dotY = Math.round(this.headerH * 0.8);
+        ctx.save();
+        if (total <= 14) {
+            const r = 4.2;
+            const gap = 14;
+            const span = (total - 1) * gap;
+            const startX = this.W / 2 - span / 2;
+            for (let i = 0; i < total; i++) {
+                const dx = startX + i * gap;
+                let fill = 'rgba(148, 163, 184, 0.25)';
+                let glow = 0;
+                let rad = r;
+                if (this.phase === 'round_clear') {
+                    fill = '#ffd700';
+                    glow = 8;
+                } else if (this.phase === 'show_on' || this.phase === 'show_gap') {
+                    if (i < this.showIndex) { fill = '#38bdf8'; glow = 6; }
+                    else if (i === this.showIndex && this.phase === 'show_on') { fill = '#e0f2fe'; glow = 10; rad = r * 1.3; }
+                } else if (this.phase === 'input') {
+                    if (i < this.inputIndex) { fill = '#34d399'; glow = 8; }
+                    else if (i === this.inputIndex) { fill = '#f8fafc'; glow = 6; rad = r * 1.2; }
+                } else if (this.phase === 'fail') {
+                    if (i < this.inputIndex) fill = '#34d399';
+                    else if (i === this.inputIndex) { fill = '#ff4d6d'; glow = 10; rad = r * 1.3; }
+                }
+                ctx.fillStyle = fill;
+                ctx.shadowColor = fill;
+                ctx.shadowBlur = glow;
+                ctx.beginPath();
+                ctx.arc(dx, dotY, rad, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else {
+            const done = (this.phase === 'input' || this.phase === 'fail')
+                ? this.inputIndex
+                : (this.phase === 'round_clear' ? total : this.showIndex);
+            const barW = Math.min(220, this.W - 60);
+            const barH = 8;
+            const bx = (this.W - barW) / 2;
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.22)';
+            this.roundPath(ctx, bx, dotY - barH / 2, barW, barH, 4);
+            ctx.fill();
+            const ratio = Math.max(0, Math.min(1, done / total));
+            if (ratio > 0) {
+                const c = this.phase === 'fail' ? '#ff4d6d' : (this.phase === 'input' ? '#34d399' : '#38bdf8');
+                ctx.fillStyle = c;
+                ctx.shadowColor = c;
+                ctx.shadowBlur = 8;
+                this.roundPath(ctx, bx, dotY - barH / 2, Math.max(barH, barW * ratio), barH, 4);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        if (!ctx || !this.padRects.length) return;
+
+        ctx.fillStyle = '#080b14';
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        this.beginFrame(ctx);
+
+        // 은은한 중앙 방사 배경
+        ctx.save();
+        const bgGrad = ctx.createRadialGradient(
+            this.W / 2, this.gridY + this.boardTotal / 2, 10,
+            this.W / 2, this.gridY + this.boardTotal / 2, Math.max(this.W, this.H) * 0.65
+        );
+        bgGrad.addColorStop(0, 'rgba(30, 41, 68, 0.42)');
+        bgGrad.addColorStop(1, 'rgba(8, 11, 20, 0)');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, this.W, this.H);
+        ctx.restore();
+
+        this.drawStatusHeader(ctx);
+
+        // 보드 외곽 프레임 (입력 잠금 중엔 은은하게, 입력 가능 시 밝게)
+        const locked = this.running && this.phase !== 'input';
+        ctx.save();
+        ctx.fillStyle = 'rgba(13, 18, 32, 0.9)';
+        ctx.strokeStyle = locked ? 'rgba(148, 163, 184, 0.22)' : 'rgba(52, 211, 153, 0.42)';
+        ctx.lineWidth = 1.5;
+        this.roundPath(ctx, this.gridX - 8, this.gridY - 8, this.boardTotal + 16, this.boardTotal + 16, 20);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // 파동 링
+        for (const rg of this.rings) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, rg.alpha);
+            ctx.strokeStyle = rg.color;
+            ctx.shadowColor = rg.color;
+            ctx.shadowBlur = 14;
+            ctx.lineWidth = 3;
+            const s = rg.size + rg.expand * 2;
+            this.roundPath(ctx, rg.cx - s / 2, rg.cy - s / 2, s, s, 20);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 2x2 네온 패드 4개 (밝기 + 크기 변화로 무음 환경에서도 또렷하게 구분)
+        for (let i = 0; i < MEMORY_PADS.length; i++) {
+            const pad = MEMORY_PADS[i];
+            const rect = this.padRects[i];
+            const glow = this.padGlow[i];
+            const scl = 1 + 0.085 * this.padScale[i];
+            const drawSize = rect.size * scl;
+            const x = rect.cx - drawSize / 2;
+            const y = rect.cy - drawSize / 2;
+            const radius = Math.max(14, Math.round(drawSize * 0.16));
+            const isWrong = this.phase === 'fail' && this.wrongPad === i;
+            const activeColor = isWrong ? '#ff2a55' : pad.color;
+
+            ctx.save();
+            // 기본 어두운 바닥
+            ctx.fillStyle = pad.dim;
+            if (glow > 0.02 || isWrong) {
+                ctx.shadowColor = activeColor;
+                ctx.shadowBlur = isWrong ? 26 : 30 * glow;
+            }
+            this.roundPath(ctx, x, y, drawSize, drawSize, radius);
+            ctx.fill();
+
+            // 반짝일 때 강렬한 밝기 레이어 + 중앙 화이트 코어
+            if (glow > 0.01 || isWrong) {
+                const intensity = isWrong ? 0.85 : glow;
+                const grad = ctx.createRadialGradient(
+                    rect.cx, rect.cy, drawSize * 0.05,
+                    rect.cx, rect.cy, drawSize * 0.72
+                );
+                grad.addColorStop(0, isWrong ? 'rgba(255, 228, 230, 0.92)' : 'rgba(255, 255, 255, 0.95)');
+                grad.addColorStop(0.45, activeColor);
+                grad.addColorStop(1, activeColor);
+                ctx.globalAlpha = Math.min(1, intensity * 0.95);
+                ctx.fillStyle = grad;
+                this.roundPath(ctx, x, y, drawSize, drawSize, radius);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            } else {
+                // 꺼진 상태 상단 은은한 입체 하이라이트
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+                this.roundPath(ctx, x + 3, y + 3, drawSize - 6, drawSize * 0.28, Math.max(8, radius - 3));
+                ctx.fill();
+            }
+
+            // 테두리
+            ctx.shadowBlur = glow > 0.05 ? 16 * glow : 0;
+            ctx.shadowColor = activeColor;
+            ctx.strokeStyle = glow > 0.35 ? pad.lit : (isWrong ? '#fecdd3' : activeColor);
+            ctx.globalAlpha = glow > 0.05 || isWrong ? 1 : (locked ? 0.42 : 0.65);
+            ctx.lineWidth = glow > 0.05 || isWrong ? (2 + 2.5 * Math.max(glow, isWrong ? 1 : 0)) : 2;
+            this.roundPath(ctx, x, y, drawSize, drawSize, radius);
+            ctx.stroke();
+            ctx.restore();
+
+            // 중앙 기호 (▲ ● ■ ◆) — 반짝이면 크고 순백으로 빛남
+            const symR = rect.size * (0.21 + 0.055 * this.padScale[i]);
+            ctx.save();
+            this.drawSymbol(ctx, pad.shape, rect.cx, rect.cy, symR);
+            if (glow > 0.25) {
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 18 * glow;
+                ctx.fill();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = pad.color;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = pad.color;
+                ctx.globalAlpha = locked ? 0.52 : 0.78;
+                ctx.shadowColor = pad.color;
+                ctx.shadowBlur = 6;
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // 오답 패드 X 표시
+            if (isWrong) {
+                const xr = rect.size * 0.19;
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.moveTo(rect.cx - xr, rect.cy - xr);
+                ctx.lineTo(rect.cx + xr, rect.cy + xr);
+                ctx.moveTo(rect.cx + xr, rect.cy - xr);
+                ctx.lineTo(rect.cx - xr, rect.cy + xr);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        this.endFrame(ctx);
+    }
+}
+
+
+/* ============================================================
+   11) Neon Pop — 네온 컬러 팝
+   ============================================================ */
+
+const POP_COLS = 8;
+const POP_ROWS = 10;
+const POP_CLEAR_BONUS = 500;
+const POP_ANIM_DUR = 0.15;
+const POP_SHAKE_DUR = 0.22;
+const POP_TILES = [
+    { color: '#00f3ff', dark: '#0b4a5e', light: '#cffafe', shape: 'circle',  symbol: '●', freq: 523.25 },
+    { color: '#ff4d6d', dark: '#5e1427', light: '#ffe4e6', shape: 'tri',     symbol: '▲', freq: 622.25 },
+    { color: '#34d399', dark: '#0f4c3a', light: '#d1fae5', shape: 'square',  symbol: '■', freq: 739.99 },
+    { color: '#fbbf24', dark: '#5e3f08', light: '#fef3c7', shape: 'diamond', symbol: '◆', freq: 880.0 }
+];
+
+class NeonPop extends Game {
+    constructor() {
+        super('pop', 'scr-pop', 'cv-pop');
+        this.titleEn = 'Neon Pop';
+        this.titleKr = '네온 컬러 팝';
+        this.introHint = '상하좌우로 이어진 같은 색 타일(● ▲ ■ ◆) 2개 이상을 탭해 지우세요. 한 번에 많이 지울수록 높은 점수! 모두 지우면 +500점.<br>Tap 2+ matching tiles to pop. Bigger groups score n×(n−1). Clear all tiles for +500 bonus.';
+        this._lastTouch = 0;
+        this.grid = [];
+        this.popping = [];
+        this.animating = false;
+        this.animTime = 0;
+        this.pendingEnd = false;
+        this.remaining = POP_COLS * POP_ROWS;
+    }
+
+    onResize() {
+        const pad = 8;
+        const gap = 3;
+        const maxW = Math.floor((this.W - pad * 2 - gap * (POP_COLS - 1)) / POP_COLS);
+        const maxH = Math.floor((this.H - pad * 2 - gap * (POP_ROWS - 1)) / POP_ROWS);
+        this.cellSize = Math.max(18, Math.min(maxW, maxH));
+        this.gap = gap;
+        this.boardW = this.cellSize * POP_COLS + gap * (POP_COLS - 1);
+        this.boardH = this.cellSize * POP_ROWS + gap * (POP_ROWS - 1);
+        this.offX = Math.floor((this.W - this.boardW) / 2);
+        this.offY = Math.floor((this.H - this.boardH) / 2);
+    }
+
+    reset() {
+        this.onResize();
+        this.grid = Array.from({ length: POP_ROWS }, (_, r) =>
+            Array.from({ length: POP_COLS }, (_, c) => ({
+                type: (Math.random() * POP_TILES.length) | 0,
+                fromR: r,
+                fromC: c,
+                r,
+                c,
+                shakeT: 0
+            }))
+        );
+        // 초기 배치에 최소 1개 이상 지울 수 있는 묶음을 보장한다.
+        if (!this.hasAnyMove()) {
+            this.grid[0][1].type = this.grid[0][0].type;
+        }
+        this.remaining = POP_COLS * POP_ROWS;
+        this.score = 0;
+        this.bestAtStart = store.best(this.id);
+        this.animating = false;
+        this.animTime = 0;
+        this.pendingEnd = false;
+        this.popping = [];
+        this.particles = [];
+        this.shakeTime = 0;
+        this.setStat('score', 0);
+        this.setStat('left', this.remaining);
+        this.setStat('bestval', this.bestAtStart);
+    }
+
+    exit() {
+        if (!this.over && this.score > 0) store.setBest(this.id, this.score);
+        super.exit();
+    }
+
+    cellXY(r, c) {
+        const step = this.cellSize + this.gap;
+        return {
+            x: this.offX + c * step,
+            y: this.offY + r * step
+        };
+    }
+
+    cellAt(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        if (x < this.offX || x >= this.offX + this.boardW || y < this.offY || y >= this.offY + this.boardH) {
+            return null;
+        }
+        const step = this.cellSize + this.gap;
+        const c = Math.min(POP_COLS - 1, Math.max(0, Math.floor((x - this.offX) / step)));
+        const r = Math.min(POP_ROWS - 1, Math.max(0, Math.floor((y - this.offY) / step)));
+        return { r, c };
+    }
+
+    findGroup(startR, startC) {
+        const start = this.grid[startR] && this.grid[startR][startC];
+        if (!start) return [];
+        const targetType = start.type;
+        const visited = Array.from({ length: POP_ROWS }, () => new Uint8Array(POP_COLS));
+        const queue = [[startR, startC]];
+        const group = [];
+        visited[startR][startC] = 1;
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+        while (queue.length > 0) {
+            const [r, c] = queue.shift();
+            group.push([r, c]);
+            for (const [dr, dc] of dirs) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr < 0 || nr >= POP_ROWS || nc < 0 || nc >= POP_COLS) continue;
+                if (visited[nr][nc]) continue;
+                const nb = this.grid[nr][nc];
+                if (nb && nb.type === targetType) {
+                    visited[nr][nc] = 1;
+                    queue.push([nr, nc]);
+                }
+            }
+        }
+        return group;
+    }
+
+    hasAnyMove() {
+        for (let r = 0; r < POP_ROWS; r++) {
+            for (let c = 0; c < POP_COLS; c++) {
+                const cell = this.grid[r][c];
+                if (!cell) continue;
+                if (c + 1 < POP_COLS && this.grid[r][c + 1] && this.grid[r][c + 1].type === cell.type) {
+                    return true;
+                }
+                if (r + 1 < POP_ROWS && this.grid[r + 1][c] && this.grid[r + 1][c].type === cell.type) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    collapseBoard() {
+        const nextGrid = Array.from({ length: POP_ROWS }, () => Array(POP_COLS).fill(null));
+        let writeC = 0;
+        let anyMoved = false;
+
+        for (let c = 0; c < POP_COLS; c++) {
+            const colTiles = [];
+            for (let r = POP_ROWS - 1; r >= 0; r--) {
+                const tile = this.grid[r][c];
+                if (tile) colTiles.push(tile);
+            }
+            if (colTiles.length === 0) continue;
+
+            for (let i = 0; i < colTiles.length; i++) {
+                const tile = colTiles[i];
+                const newR = POP_ROWS - 1 - i;
+                tile.fromR = tile.r;
+                tile.fromC = tile.c;
+                tile.r = newR;
+                tile.c = writeC;
+                if (tile.fromR !== tile.r || tile.fromC !== tile.c) {
+                    anyMoved = true;
+                }
+                nextGrid[newR][writeC] = tile;
+            }
+            writeC++;
+        }
+
+        this.grid = nextGrid;
+        return anyMoved;
+    }
+
+    handleTap(r, c) {
+        if (!this.running || this.over || this.animating) return;
+        const tile = this.grid[r] && this.grid[r][c];
+        if (!tile) return;
+
+        const group = this.findGroup(r, c);
+        if (group.length < 2) {
+            tile.shakeT = POP_SHAKE_DUR;
+            sfx.blip(210, 0.06, 'triangle', 0.045);
+            vibe(14);
+            return;
+        }
+
+        const n = group.length;
+        const info = POP_TILES[tile.type];
+        const pts = n * (n - 1);
+        const s = this.cellSize;
+        let sumX = 0;
+        let sumY = 0;
+        const sparkPerTile = Math.max(2, Math.min(6, Math.floor(24 / n) + 1));
+
+        for (const [gr, gc] of group) {
+            const pos = this.cellXY(gr, gc);
+            const cx = pos.x + s / 2;
+            const cy = pos.y + s / 2;
+            sumX += cx;
+            sumY += cy;
+            this.popping.push({
+                x: pos.x,
+                y: pos.y,
+                type: tile.type,
+                t: 0,
+                dur: 0.14
+            });
+            this.addSpark(cx, cy, info.color, sparkPerTile, 3.2);
+            this.grid[gr][gc] = null;
+        }
+
+        this.remaining -= n;
+        this.score += pts;
+
+        const centerX = Math.max(36, Math.min(this.W - 36, sumX / n));
+        const centerY = Math.max(24, sumY / n);
+        this.addPopupText(`+${pts}`, centerX, centerY, info.light);
+
+        const pitch = Math.min(1180, info.freq + Math.min(n - 2, 10) * 45);
+        sfx.blip(pitch, 0.075, 'triangle', 0.055);
+        if (n >= 6) {
+            sfx.good();
+            vibe(24);
+        } else {
+            vibe(12);
+        }
+
+        const anyMoved = this.collapseBoard();
+
+        // 지우기 직후마다 끝 판정(남은 타일 0개 또는 지울 묶음 없음)을 검사한다.
+        const noMoves = this.remaining === 0 || !this.hasAnyMove();
+        if (noMoves) {
+            if (this.remaining === 0) {
+                this.score += POP_CLEAR_BONUS;
+                this.addPopupText(`ALL CLEAR +${POP_CLEAR_BONUS}!`, this.W / 2, this.offY + this.boardH * 0.42, '#ffd700');
+                this.addSpark(this.W / 2, this.offY + this.boardH * 0.45, '#ffd700', 24, 4.8);
+                this.addSpark(this.W / 2, this.offY + this.boardH * 0.45, '#00f3ff', 18, 4.2);
+            }
+            this.pendingEnd = true;
+        }
+
+        this.setStat('score', this.score);
+        this.setStat('left', this.remaining);
+        this.setStat('bestval', Math.max(this.bestAtStart, this.score));
+
+        if (anyMoved || this.pendingEnd) {
+            this.animating = true;
+            this.animTime = 0;
+        }
+    }
+
+    finishGame() {
+        if (this.over) return;
+        const cleared = this.remaining === 0;
+        this.over = true;
+        this.running = false;
+        this.animating = false;
+        this.pendingEnd = false;
+
+        const isNew = store.setBest(this.id, this.score);
+        this.setStat('bestval', store.best(this.id));
+        this.draw();
+
+        if (cleared) {
+            sfx.good();
+            vibe([0, 40, 40, 80]);
+            this.showOverlay(`
+                <div class="ov-title">ALL CLEAR!</div>
+                <div class="ov-kr">모든 타일 제거 · 보너스 +${POP_CLEAR_BONUS}점</div>
+                <div class="ov-score">${this.score}</div>
+                <div class="ov-best">BEST ${store.best(this.id)}</div>
+                ${isNew ? '<div class="ov-new">🏆 신기록! · New record!</div>' : ''}
+                <button class="ov-btn">다시 하기 · Play Again</button>
+            `);
+        } else {
+            sfx.over();
+            vibe([0, 120, 60, 200]);
+            this.showOverlay(`
+                <div class="ov-title">GAME OVER</div>
+                <div class="ov-kr">더 지울 묶음이 없습니다 · No Moves Left (남은 타일 ${this.remaining})</div>
+                <div class="ov-score">${this.score}</div>
+                <div class="ov-best">BEST ${store.best(this.id)}</div>
+                ${isNew ? '<div class="ov-new">🏆 신기록! · New record!</div>' : ''}
+                <button class="ov-btn">다시 하기 · Retry</button>
+            `);
+        }
+    }
+
+    bindInput() {
+        this.on(this.screen, 'contextmenu', (e) => { e.preventDefault(); });
+        this.on(this.screen, 'selectstart', (e) => { e.preventDefault(); });
+
+        this.on(this.canvas, 'touchstart', (e) => {
+            this._lastTouch = performance.now();
+            e.preventDefault();
+            if (!this.running || this.over || this.animating) return;
+            if (e.touches.length !== 1) return;
+            sfx.init();
+            const t = e.touches[0];
+            const hit = this.cellAt(t.clientX, t.clientY);
+            if (hit) this.handleTap(hit.r, hit.c);
+        }, { passive: false });
+
+        this.on(this.canvas, 'mousedown', (e) => {
+            if (performance.now() - this._lastTouch < 450) return;
+            if (e.button !== 0) return;
+            if (!this.running || this.over || this.animating) return;
+            sfx.init();
+            const hit = this.cellAt(e.clientX, e.clientY);
+            if (hit) this.handleTap(hit.r, hit.c);
+        });
+    }
+
+    update(dt) {
+        this.updateFx(dt);
+
+        for (let r = 0; r < POP_ROWS; r++) {
+            for (let c = 0; c < POP_COLS; c++) {
+                const tile = this.grid[r][c];
+                if (tile && tile.shakeT > 0) {
+                    tile.shakeT = Math.max(0, tile.shakeT - dt);
+                }
+            }
+        }
+
+        for (let i = this.popping.length - 1; i >= 0; i--) {
+            const p = this.popping[i];
+            p.t += dt;
+            if (p.t >= p.dur) this.popping.splice(i, 1);
+        }
+
+        if (this.animating) {
+            this.animTime += dt;
+            if (this.animTime >= POP_ANIM_DUR) {
+                this.animTime = POP_ANIM_DUR;
+                this.animating = false;
+                for (let r = 0; r < POP_ROWS; r++) {
+                    for (let c = 0; c < POP_COLS; c++) {
+                        const tile = this.grid[r][c];
+                        if (tile) {
+                            tile.fromR = tile.r;
+                            tile.fromC = tile.c;
+                        }
+                    }
+                }
+                if (this.pendingEnd) {
+                    this.pendingEnd = false;
+                    this.finishGame();
+                }
+            }
+        }
+    }
+
+    roundPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+    }
+
+    drawSymbol(ctx, shape, cx, cy, rad) {
+        ctx.beginPath();
+        if (shape === 'circle') {
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        } else if (shape === 'tri') {
+            ctx.moveTo(cx, cy - rad * 1.05);
+            ctx.lineTo(cx + rad * 1.02, cy + rad * 0.88);
+            ctx.lineTo(cx - rad * 1.02, cy + rad * 0.88);
+            ctx.closePath();
+        } else if (shape === 'square') {
+            const half = rad * 0.84;
+            ctx.rect(cx - half, cy - half, half * 2, half * 2);
+        } else {
+            ctx.moveTo(cx, cy - rad * 1.08);
+            ctx.lineTo(cx + rad * 1.08, cy);
+            ctx.lineTo(cx, cy + rad * 1.08);
+            ctx.lineTo(cx - rad * 1.08, cy);
+            ctx.closePath();
+        }
+    }
+
+    drawTile(ctx, x, y, size, type, alpha = 1, flash = 0) {
+        const info = POP_TILES[type];
+        const radius = Math.max(5, Math.floor(size * 0.2));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // 타일 몸통 (어두운 네온 배경 + 선명한 네온 채우기)
+        const grad = ctx.createLinearGradient(x, y, x, y + size);
+        grad.addColorStop(0, info.color);
+        grad.addColorStop(1, info.dark);
+        ctx.fillStyle = grad;
+        ctx.shadowColor = info.color;
+        ctx.shadowBlur = 7;
+        this.roundPath(ctx, x, y, size, size, radius);
+        ctx.fill();
+
+        // 상단 광택 하이라이트
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.26)';
+        this.roundPath(ctx, x + 2, y + 2, size - 4, Math.max(3, size * 0.24), Math.max(3, radius - 2));
+        ctx.fill();
+
+        // 외곽 테두리
+        ctx.strokeStyle = flash > 0 ? '#ffffff' : info.light;
+        ctx.globalAlpha = alpha * (flash > 0 ? 0.95 : 0.65);
+        ctx.lineWidth = flash > 0 ? 2 : 1.25;
+        this.roundPath(ctx, x + 0.5, y + 0.5, size - 1, size - 1, radius);
+        ctx.stroke();
+
+        // 중앙 기호 (색만으로 구분하지 않도록 ● ▲ ■ ◆ 병기)
+        ctx.globalAlpha = alpha;
+        const cx = x + size / 2;
+        const cy = y + size / 2;
+        const rad = size * 0.24;
+        this.drawSymbol(ctx, info.shape, cx, cy, rad);
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(8, 11, 20, 0.68)';
+        ctx.lineWidth = Math.max(1.5, size * 0.055);
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        if (!ctx || !this.grid.length) return;
+
+        ctx.fillStyle = '#080b14';
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        this.beginFrame(ctx);
+
+        // 보드 외곽 네온 프레임
+        ctx.save();
+        ctx.fillStyle = '#0d1322';
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(0, 243, 255, 0.32)';
+        ctx.shadowBlur = 12;
+        this.roundPath(ctx, this.offX - 5, this.offY - 5, this.boardW + 10, this.boardH + 10, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        const s = this.cellSize;
+        const step = s + this.gap;
+        const slotRad = Math.max(4, Math.floor(s * 0.18));
+
+        // 빈 격자 슬롯
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        for (let r = 0; r < POP_ROWS; r++) {
+            for (let c = 0; c < POP_COLS; c++) {
+                this.roundPath(ctx, this.offX + c * step, this.offY + r * step, s, s, slotRad);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+
+        // 방금 터진 타일 축소 잔상
+        for (const p of this.popping) {
+            const k = Math.min(1, p.t / p.dur);
+            const scl = 1 - k * 0.45;
+            const drawS = s * scl;
+            const offset = (s - drawS) / 2;
+            this.drawTile(ctx, p.x + offset, p.y + offset, drawS, p.type, Math.max(0, 1 - k), 1);
+        }
+
+        // 살아 있는 타일 렌더링 (낙하·좌측 이동 보간 + 1개 흔들림)
+        const rawT = this.animating ? Math.min(1, this.animTime / POP_ANIM_DUR) : 1;
+        const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+        for (let r = 0; r < POP_ROWS; r++) {
+            for (let c = 0; c < POP_COLS; c++) {
+                const tile = this.grid[r][c];
+                if (!tile) continue;
+
+                let drawR = tile.r;
+                let drawC = tile.c;
+                if (this.animating && (tile.fromR !== tile.r || tile.fromC !== tile.c)) {
+                    const movedV = tile.fromR !== tile.r;
+                    const movedH = tile.fromC !== tile.c;
+                    if (movedV && movedH) {
+                        const tv = easeOut(Math.min(1, rawT / 0.68));
+                        const th = easeOut(Math.max(0, Math.min(1, (rawT - 0.32) / 0.68)));
+                        drawR = tile.fromR + (tile.r - tile.fromR) * tv;
+                        drawC = tile.fromC + (tile.c - tile.fromC) * th;
+                    } else {
+                        const t = easeOut(rawT);
+                        drawR = tile.fromR + (tile.r - tile.fromR) * t;
+                        drawC = tile.fromC + (tile.c - tile.fromC) * t;
+                    }
+                }
+
+                let shakeX = 0;
+                let flash = 0;
+                if (tile.shakeT > 0) {
+                    const progress = 1 - tile.shakeT / POP_SHAKE_DUR;
+                    const decay = tile.shakeT / POP_SHAKE_DUR;
+                    shakeX = Math.sin(progress * Math.PI * 5) * 4.5 * decay;
+                    flash = decay;
+                }
+
+                const x = this.offX + drawC * step + shakeX;
+                const y = this.offY + drawR * step;
+                this.drawTile(ctx, x, y, s, tile.type, 1, flash);
+            }
+        }
+
+        this.endFrame(ctx);
+    }
+}
+
+
 const games = {
     slots: new Slots(),
     block: new BlockDrop(),
@@ -6459,7 +7671,9 @@ const games = {
     puzzle: new Neon2048(),
     flappy: new FlappyNeon(),
     tower: new NeonTower(),
-    mines: new NeonMines()
+    mines: new NeonMines(),
+    memory: new NeonMemory(),
+    pop: new NeonPop()
 };
 
 let current = null;
