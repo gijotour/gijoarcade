@@ -1525,6 +1525,78 @@ canvas {
     background: linear-gradient(145deg, rgba(52, 211, 153, 0.2), rgba(14, 165, 233, 0.08));
 }
 
+.mines-portal-item .portal-item-icon {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(255, 77, 109, 0.08));
+}
+
+.mines-screen {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+.mines-screen canvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.mines-wrap {
+    margin: 0 6px 8px;
+}
+
+.mines-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px 6px;
+    flex-shrink: 0;
+}
+
+.mines-flag-btn {
+    width: 100%;
+    max-width: 260px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.mines-flag-btn.on {
+    border-color: var(--amber-neon);
+    background: rgba(245, 158, 11, 0.18);
+    color: #fde68a;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+}
+
+.mines-flag-btn:active {
+    transform: scale(0.97);
+}
+
+.mines-flag-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+}
+
+.mines-hint {
+    padding: 0 12px 8px;
+    font-size: 0.7rem;
+}
+
 </style>
 </head>
 <body>
@@ -1647,6 +1719,20 @@ canvas {
                             <span class="portal-best-pill" data-best="tower">BEST 0</span>
                         </span>
                         <span class="portal-item-desc">타이밍에 맞춰 네온 블록을 높이 쌓기</span>
+                    </span>
+                    <span class="portal-item-arrow">&#8594;</span>
+                </button>
+            </div>
+
+            <div class="portal-item mines-portal-item">
+                <button class="portal-item-main" data-go="mines" aria-label="지뢰찾기 · Neon Mines">
+                    <span class="portal-item-icon">🚩</span>
+                    <span class="portal-item-texts">
+                        <span class="portal-item-title-row">
+                            <span class="portal-item-title">지뢰찾기</span>
+                            <span class="portal-best-pill" data-best="mines">BEST 0</span>
+                        </span>
+                        <span class="portal-item-desc">숫자를 단서로 숨은 지뢰를 피해 칸 열기</span>
                     </span>
                     <span class="portal-item-arrow">&#8594;</span>
                 </button>
@@ -1829,6 +1915,26 @@ canvas {
             <div class="overlay" data-overlay></div>
         </div>
         <p class="hint">화면 탭 / 스페이스 = 블록 멈추기 · Tap or Space to drop</p>
+    </section>
+
+    <!-- ===== 네온 지뢰찾기 ===== -->
+    <section id="scr-mines" class="screen hidden game-screen mines-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Mines</span><span class="stat-val" data-mines>16</span></div>
+                <div class="stat"><span class="stat-label">Time</span><span class="stat-val" data-score>0s</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>-</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap mines-wrap">
+            <canvas id="cv-mines"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <div class="mines-controls">
+            <button type="button" class="mines-flag-btn" id="mines-flag-btn" aria-pressed="false">🚩 깃발 모드: 꺼짐 · Tap to Open</button>
+        </div>
+        <p class="hint mines-hint">탭 = 열기 · 길게 누르기/깃발 모드 = 깃발 · 숫자 탭 = 주변 열기</p>
     </section>
 
 </div>
@@ -5601,6 +5707,749 @@ class NeonTower extends Game {
 }
 
 
+/* ============================================================
+   9) Neon Mines — 네온 지뢰찾기
+   ============================================================ */
+
+const MINES_COLS = 9;
+const MINES_ROWS = 12;
+const MINES_COUNT = 16;
+const MINES_BEST_KEY = 'gijoArcade_best_mines';
+const MINES_NUM_COLORS = {
+    1: '#38bdf8',
+    2: '#34d399',
+    3: '#fb7185',
+    4: '#a78bfa',
+    5: '#fbbf24',
+    6: '#2dd4bf',
+    7: '#f472b6',
+    8: '#f8fafc'
+};
+
+class NeonMines extends Game {
+    constructor() {
+        super('mines', 'scr-mines', 'cv-mines');
+        this.titleEn = 'Neon Mines';
+        this.titleKr = '네온 지뢰찾기';
+        this.introHint = '첫 탭과 주변 8칸은 안전합니다. 숫자를 단서로 16개 지뢰를 피해 모든 칸을 여세요.<br>First tap is safe. Clear every safe tile avoiding 16 mines.';
+        this._lastTouch = 0;
+        this.elapsedTimer = null;
+        this.press = null;
+        this.flagMode = false;
+    }
+
+    getBestTime() {
+        const v = store.best(this.id);
+        return v > 0 ? v : 0;
+    }
+
+    saveBestTime(sec) {
+        if (!Number.isFinite(sec) || sec <= 0) return false;
+        const prev = this.getBestTime();
+        if (prev === 0 || sec < prev) {
+            try { localStorage.setItem(MINES_BEST_KEY, String(sec)); } catch (e) { /* 저장소 제한 환경 */ }
+            return true;
+        }
+        return false;
+    }
+
+    formatBest(sec) {
+        return sec > 0 ? `${sec}s` : '-';
+    }
+
+    onResize() {
+        const pad = 5;
+        const gap = 2;
+        const maxW = Math.floor((this.W - pad * 2 - gap * (MINES_COLS - 1)) / MINES_COLS);
+        const maxH = Math.floor((this.H - pad * 2 - gap * (MINES_ROWS - 1)) / MINES_ROWS);
+        this.cellSize = Math.max(16, Math.min(maxW, maxH));
+        this.gap = gap;
+        this.boardW = this.cellSize * MINES_COLS + gap * (MINES_COLS - 1);
+        this.boardH = this.cellSize * MINES_ROWS + gap * (MINES_ROWS - 1);
+        this.offX = Math.floor((this.W - this.boardW) / 2);
+        this.offY = Math.floor((this.H - this.boardH) / 2);
+    }
+
+    reset() {
+        this.stopTimer();
+        this.cancelPress(false);
+        this.onResize();
+        this.board = Array.from({ length: MINES_ROWS }, () =>
+            Array.from({ length: MINES_COLS }, () => ({
+                mine: false,
+                open: false,
+                flag: false,
+                adj: 0,
+                exploded: false
+            }))
+        );
+        this.placed = false;
+        this.openCount = 0;
+        this.flagCount = 0;
+        this.elapsed = 0;
+        this.elapsedBase = 0;
+        this.timerStart = 0;
+        this.score = 0;
+        this.won = false;
+        this.flagMode = false;
+        this.setStat('mines', MINES_COUNT);
+        this.setStat('score', '0s');
+        this.setStat('bestval', this.formatBest(this.getBestTime()));
+        this.syncFlagBtn();
+    }
+
+    syncFlagBtn() {
+        const btn = document.getElementById('mines-flag-btn');
+        if (!btn) return;
+        btn.classList.toggle('on', this.flagMode);
+        btn.setAttribute('aria-pressed', this.flagMode ? 'true' : 'false');
+        btn.disabled = !this.running || this.over;
+        btn.textContent = this.flagMode
+            ? '🚩 깃발 모드: 켜짐 · Tap to Flag'
+            : '🚩 깃발 모드: 꺼짐 · Tap to Open';
+    }
+
+    intro() {
+        const best = this.getBestTime();
+        this.setStat('bestval', this.formatBest(best));
+        this.syncFlagBtn();
+        this.showOverlay(`
+            <div class="ov-title">${this.titleEn}</div>
+            <div class="ov-kr">${this.titleKr}</div>
+            <div class="ov-best">BEST ${this.formatBest(best)}</div>
+            <button class="ov-btn">시작 · Start</button>
+            <p class="ov-hint">${this.introHint}</p>
+        `);
+    }
+
+    begin() {
+        this.hideOverlay();
+        this.over = false;
+        this.reset();
+        this.running = true;
+        this.syncFlagBtn();
+        this.draw();
+    }
+
+    exit() {
+        this.stopTimer();
+        this.cancelPress(false);
+        super.exit();
+    }
+
+    update() {}
+
+    startTimer() {
+        this.stopTimer();
+        this.timerStart = performance.now();
+        this.elapsedTimer = setInterval(() => {
+            if (!this.running || this.over) return;
+            const sec = Math.floor((this.elapsedBase + (performance.now() - this.timerStart)) / 1000);
+            if (sec !== this.elapsed) {
+                this.elapsed = sec;
+                this.score = sec;
+                this.setStat('score', `${sec}s`);
+            }
+        }, 250);
+    }
+
+    pauseTimer() {
+        if (!this.elapsedTimer) return;
+        this.elapsedBase += performance.now() - this.timerStart;
+        this.elapsed = Math.floor(this.elapsedBase / 1000);
+        this.score = this.elapsed;
+        this.stopTimer();
+    }
+
+    resumeTimer() {
+        if (this.placed && this.running && !this.over) {
+            this.startTimer();
+        }
+    }
+
+    stopTimer() {
+        if (this.elapsedTimer) {
+            clearInterval(this.elapsedTimer);
+            this.elapsedTimer = null;
+        }
+    }
+
+    neighbors(r, c) {
+        const list = [];
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < MINES_ROWS && nc >= 0 && nc < MINES_COLS) {
+                    list.push([nr, nc]);
+                }
+            }
+        }
+        return list;
+    }
+
+    placeMines(safeR, safeC) {
+        const pool = [];
+        for (let r = 0; r < MINES_ROWS; r++) {
+            for (let c = 0; c < MINES_COLS; c++) {
+                if (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
+                pool.push([r, c]);
+            }
+        }
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = tmp;
+        }
+        for (let i = 0; i < MINES_COUNT && i < pool.length; i++) {
+            const [r, c] = pool[i];
+            this.board[r][c].mine = true;
+        }
+        for (let r = 0; r < MINES_ROWS; r++) {
+            for (let c = 0; c < MINES_COLS; c++) {
+                if (this.board[r][c].mine) continue;
+                let count = 0;
+                for (const [nr, nc] of this.neighbors(r, c)) {
+                    if (this.board[nr][nc].mine) count++;
+                }
+                this.board[r][c].adj = count;
+            }
+        }
+        this.placed = true;
+        this.startTimer();
+    }
+
+    floodOpen(startR, startC) {
+        const queue = [[startR, startC]];
+        let opened = 0;
+        while (queue.length > 0) {
+            const [r, c] = queue.shift();
+            const cell = this.board[r][c];
+            if (cell.open || cell.flag || cell.mine) continue;
+            cell.open = true;
+            opened++;
+            if (cell.adj === 0) {
+                for (const [nr, nc] of this.neighbors(r, c)) {
+                    const nb = this.board[nr][nc];
+                    if (!nb.open && !nb.flag && !nb.mine) {
+                        queue.push([nr, nc]);
+                    }
+                }
+            }
+        }
+        return opened;
+    }
+
+    openCell(r, c) {
+        if (!this.running || this.over) return;
+        const cell = this.board[r][c];
+        if (cell.open || cell.flag) {
+            this.draw();
+            return;
+        }
+        if (!this.placed) {
+            this.placeMines(r, c);
+        }
+        if (cell.mine) {
+            cell.open = true;
+            cell.exploded = true;
+            this.lose();
+            return;
+        }
+        const opened = this.floodOpen(r, c);
+        this.openCount += opened;
+        if (this.openCount >= MINES_COLS * MINES_ROWS - MINES_COUNT) {
+            this.win();
+            return;
+        }
+        sfx.blip(opened > 1 ? 640 : 520, 0.05, 'triangle', 0.045);
+        vibe(10);
+        this.draw();
+    }
+
+    chord(r, c) {
+        if (!this.running || this.over) return;
+        const cell = this.board[r][c];
+        if (!cell.open || cell.adj <= 0) return;
+        const nbs = this.neighbors(r, c);
+        let adjFlags = 0;
+        const targets = [];
+        for (const [nr, nc] of nbs) {
+            const nb = this.board[nr][nc];
+            if (nb.flag) adjFlags++;
+            else if (!nb.open) targets.push([nr, nc]);
+        }
+        if (adjFlags !== cell.adj || targets.length === 0) {
+            this.draw();
+            return;
+        }
+        let hitMine = false;
+        let openedTotal = 0;
+        for (const [nr, nc] of targets) {
+            const nb = this.board[nr][nc];
+            if (nb.open || nb.flag) continue;
+            if (nb.mine) {
+                nb.open = true;
+                nb.exploded = true;
+                hitMine = true;
+            } else {
+                openedTotal += this.floodOpen(nr, nc);
+            }
+        }
+        this.openCount += openedTotal;
+        if (hitMine) {
+            this.lose();
+            return;
+        }
+        if (this.openCount >= MINES_COLS * MINES_ROWS - MINES_COUNT) {
+            this.win();
+            return;
+        }
+        if (openedTotal > 0) {
+            sfx.blip(700, 0.055, 'triangle', 0.05);
+            vibe(14);
+        }
+        this.draw();
+    }
+
+    toggleFlag(r, c, isLongPress = false) {
+        if (!this.running || this.over) return;
+        const cell = this.board[r][c];
+        if (cell.open) {
+            this.draw();
+            return;
+        }
+        cell.flag = !cell.flag;
+        this.flagCount += cell.flag ? 1 : -1;
+        this.setStat('mines', MINES_COUNT - this.flagCount);
+        sfx.blip(cell.flag ? 760 : 360, 0.05, 'triangle', 0.045);
+        vibe(isLongPress ? 35 : 14);
+        this.draw();
+    }
+
+    lose() {
+        if (this.over) return;
+        this.over = true;
+        this.running = false;
+        this.pauseTimer();
+        this.cancelPress(false);
+        this.syncFlagBtn();
+        this.draw();
+        sfx.over();
+        vibe([0, 120, 60, 200]);
+        const best = this.getBestTime();
+        this.showOverlay(`
+            <div class="ov-title">GAME OVER</div>
+            <div class="ov-kr">지뢰를 밟았습니다 · Hit a Mine</div>
+            <div class="ov-score">${this.elapsed}초 · ${this.elapsed}s</div>
+            <div class="ov-best">BEST ${this.formatBest(best)}</div>
+            <button class="ov-btn">다시 하기 · Retry</button>
+        `);
+    }
+
+    win() {
+        if (this.over) return;
+        this.over = true;
+        this.running = false;
+        this.won = true;
+        this.pauseTimer();
+        this.cancelPress(false);
+
+        for (let r = 0; r < MINES_ROWS; r++) {
+            for (let c = 0; c < MINES_COLS; c++) {
+                if (this.board[r][c].mine) this.board[r][c].flag = true;
+            }
+        }
+        this.flagCount = MINES_COUNT;
+        this.setStat('mines', 0);
+
+        const clearSec = Math.max(1, Math.floor(this.elapsedBase / 1000));
+        this.elapsed = clearSec;
+        this.score = clearSec;
+        this.setStat('score', `${clearSec}s`);
+
+        const isNew = this.saveBestTime(clearSec);
+        const best = this.getBestTime();
+        this.setStat('bestval', this.formatBest(best));
+        this.syncFlagBtn();
+        this.draw();
+
+        sfx.good();
+        vibe([0, 40, 40, 80]);
+        this.showOverlay(`
+            <div class="ov-title">CLEAR!</div>
+            <div class="ov-kr">모든 지뢰를 피했습니다 · Cleared</div>
+            <div class="ov-score">${clearSec}초 · ${clearSec}s</div>
+            <div class="ov-best">BEST ${this.formatBest(best)}</div>
+            ${isNew ? '<div class="ov-new">🏆 최단 기록! · Best time!</div>' : ''}
+            <button class="ov-btn">다시 하기 · Play Again</button>
+        `);
+    }
+
+    cellAt(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        if (x < this.offX || x >= this.offX + this.boardW || y < this.offY || y >= this.offY + this.boardH) {
+            return null;
+        }
+        const step = this.cellSize + this.gap;
+        const c = Math.min(MINES_COLS - 1, Math.max(0, Math.floor((x - this.offX) / step)));
+        const r = Math.min(MINES_ROWS - 1, Math.max(0, Math.floor((y - this.offY) / step)));
+        return { r, c };
+    }
+
+    startPress(r, c, x, y, source) {
+        this.cancelPress(false);
+        const cell = this.board[r][c];
+        this.press = { r, c, startX: x, startY: y, source, longFired: false, timer: null };
+        this.draw();
+        if (!cell.open) {
+            this.press.timer = setTimeout(() => {
+                if (!this.press || !this.running || this.over) return;
+                this.press.longFired = true;
+                this.press.timer = null;
+                this.toggleFlag(r, c, true);
+            }, 400);
+        }
+    }
+
+    cancelPress(redraw = true) {
+        if (!this.press) return;
+        if (this.press.timer) clearTimeout(this.press.timer);
+        this.press = null;
+        if (redraw && this.ctx) this.draw();
+    }
+
+    endPress(source) {
+        if (!this.press || this.press.source !== source) return;
+        const p = this.press;
+        if (p.timer) clearTimeout(p.timer);
+        this.press = null;
+        if (p.longFired) {
+            this.draw();
+            return;
+        }
+        this.handleTap(p.r, p.c);
+    }
+
+    handleTap(r, c) {
+        if (!this.running || this.over) return;
+        const cell = this.board[r][c];
+        if (cell.open) {
+            if (cell.adj > 0) this.chord(r, c);
+            else this.draw();
+            return;
+        }
+        if (this.flagMode) {
+            this.toggleFlag(r, c, false);
+        } else if (cell.flag) {
+            this.draw();
+        } else {
+            this.openCell(r, c);
+        }
+    }
+
+    bindInput() {
+        const flagBtn = document.getElementById('mines-flag-btn');
+        if (flagBtn) {
+            this.on(flagBtn, 'click', () => {
+                if (!this.running || this.over) return;
+                sfx.init();
+                this.flagMode = !this.flagMode;
+                this.syncFlagBtn();
+                sfx.blip(this.flagMode ? 620 : 420, 0.045, 'triangle', 0.04);
+                vibe(12);
+            });
+        }
+
+        this.on(this.screen, 'contextmenu', (e) => { e.preventDefault(); });
+        this.on(this.screen, 'selectstart', (e) => { e.preventDefault(); });
+        this.on(this.canvas, 'click', (e) => { e.preventDefault(); });
+
+        this.on(this.canvas, 'touchstart', (e) => {
+            this._lastTouch = performance.now();
+            e.preventDefault();
+            if (!this.running || this.over) return;
+            if (e.touches.length !== 1) {
+                this.cancelPress();
+                return;
+            }
+            sfx.init();
+            const t = e.touches[0];
+            const hit = this.cellAt(t.clientX, t.clientY);
+            if (!hit) return;
+            this.startPress(hit.r, hit.c, t.clientX, t.clientY, 'touch');
+        }, { passive: false });
+
+        this.on(this.canvas, 'touchmove', (e) => {
+            e.preventDefault();
+            if (!this.press || this.press.source !== 'touch' || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            if (Math.hypot(t.clientX - this.press.startX, t.clientY - this.press.startY) > 12) {
+                this.cancelPress();
+                return;
+            }
+            const hit = this.cellAt(t.clientX, t.clientY);
+            if (!hit || hit.r !== this.press.r || hit.c !== this.press.c) {
+                this.cancelPress();
+            }
+        }, { passive: false });
+
+        this.on(this.canvas, 'touchend', (e) => {
+            this._lastTouch = performance.now();
+            e.preventDefault();
+            this.endPress('touch');
+        }, { passive: false });
+
+        this.on(this.canvas, 'touchcancel', () => {
+            this.cancelPress();
+        });
+
+        this.on(this.canvas, 'mousedown', (e) => {
+            if (performance.now() - this._lastTouch < 500) return;
+            if (!this.running || this.over) return;
+            sfx.init();
+            const hit = this.cellAt(e.clientX, e.clientY);
+            if (!hit) return;
+            if (e.button === 2) {
+                e.preventDefault();
+                this.toggleFlag(hit.r, hit.c, false);
+                return;
+            }
+            if (e.button !== 0) return;
+            this.startPress(hit.r, hit.c, e.clientX, e.clientY, 'mouse');
+        });
+
+        this.on(this.canvas, 'mousemove', (e) => {
+            if (!this.press || this.press.source !== 'mouse') return;
+            if (Math.hypot(e.clientX - this.press.startX, e.clientY - this.press.startY) > 12) {
+                this.cancelPress();
+                return;
+            }
+            const hit = this.cellAt(e.clientX, e.clientY);
+            if (!hit || hit.r !== this.press.r || hit.c !== this.press.c) {
+                this.cancelPress();
+            }
+        });
+
+        this.on(this.canvas, 'mouseup', (e) => {
+            if (performance.now() - this._lastTouch < 500) return;
+            if (e.button !== 0) return;
+            this.endPress('mouse');
+        });
+
+        this.on(this.canvas, 'mouseleave', () => {
+            if (this.press && this.press.source === 'mouse') this.cancelPress();
+        });
+
+        this.on(window, 'keydown', (e) => {
+            if (!this.running || this.over || e.repeat) return;
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                sfx.init();
+                this.flagMode = !this.flagMode;
+                this.syncFlagBtn();
+                sfx.blip(this.flagMode ? 620 : 420, 0.045, 'triangle', 0.04);
+            }
+        });
+
+        this.on(document, 'visibilitychange', () => {
+            if (!document.hidden || this.over) return;
+            this.cancelPress(false);
+            this.pauseTimer();
+            const btn = this.overlay && !this.overlay.classList.contains('hidden')
+                ? this.overlay.querySelector('.ov-btn')
+                : null;
+            if (btn && !this.running) {
+                const scoreEl = this.overlay.querySelector('.ov-score');
+                if (scoreEl) scoreEl.textContent = `${this.elapsed}s`;
+                btn.onclick = () => {
+                    this.hideOverlay();
+                    this.running = true;
+                    this.syncFlagBtn();
+                    this.resumeTimer();
+                    this.draw();
+                };
+            }
+        });
+    }
+
+    roundPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+    }
+
+    drawFlag(ctx, x, y, s) {
+        const cx = x + s * 0.5;
+        const poleX = cx - s * 0.1;
+        const topY = y + s * 0.2;
+        const botY = y + s * 0.78;
+        ctx.save();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = Math.max(2, s * 0.065);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(poleX, topY);
+        ctx.lineTo(poleX, botY);
+        ctx.moveTo(poleX - s * 0.16, botY);
+        ctx.lineTo(poleX + s * 0.22, botY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff4d6d';
+        ctx.shadowColor = '#ff4d6d';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(poleX, topY);
+        ctx.lineTo(poleX + s * 0.38, topY + s * 0.16);
+        ctx.lineTo(poleX, topY + s * 0.34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    drawMine(ctx, x, y, s, exploded) {
+        const cx = x + s / 2;
+        const cy = y + s / 2;
+        const r = s * 0.24;
+        ctx.save();
+        const color = exploded ? '#ffffff' : '#ff4d6d';
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.shadowColor = '#ff4d6d';
+        ctx.shadowBlur = exploded ? 12 : 8;
+        ctx.lineWidth = Math.max(2, s * 0.065);
+        ctx.lineCap = 'round';
+
+        for (let i = 0; i < 4; i++) {
+            const ang = (Math.PI / 4) * i;
+            const len = r * 1.48;
+            ctx.beginPath();
+            ctx.moveTo(cx - Math.cos(ang) * len, cy - Math.sin(ang) * len);
+            ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
+            ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = exploded ? '#ff4d6d' : '#fff1f2';
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        if (!ctx || !this.board) return;
+
+        ctx.fillStyle = '#090c14';
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        // 보드 외곽 네온 프레임
+        ctx.save();
+        ctx.fillStyle = '#0f1422';
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.35)';
+        ctx.shadowBlur = 12;
+        this.roundPath(ctx, this.offX - 4, this.offY - 4, this.boardW + 8, this.boardH + 8, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        const s = this.cellSize;
+        const step = s + this.gap;
+        const radius = Math.max(4, Math.floor(s * 0.16));
+        const fontPx = Math.max(15, Math.round(s * 0.56));
+        const showMines = this.over && !this.won;
+
+        for (let r = 0; r < MINES_ROWS; r++) {
+            for (let c = 0; c < MINES_COLS; c++) {
+                const cell = this.board[r][c];
+                const x = this.offX + c * step;
+                const y = this.offY + r * step;
+                const isPressed = this.press && this.press.r === r && this.press.c === c;
+
+                if (cell.open || (showMines && cell.mine && !cell.flag)) {
+                    ctx.save();
+                    ctx.fillStyle = cell.exploded ? '#b91c1c' : '#111726';
+                    ctx.strokeStyle = cell.exploded
+                        ? '#ff4d6d'
+                        : 'rgba(148, 163, 184, 0.16)';
+                    ctx.lineWidth = cell.exploded ? 2 : 1;
+                    this.roundPath(ctx, x, y, s, s, radius);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+
+                    if (cell.mine) {
+                        this.drawMine(ctx, x, y, s, cell.exploded);
+                    } else if (cell.adj > 0) {
+                        const color = MINES_NUM_COLORS[cell.adj] || '#f8fafc';
+                        ctx.save();
+                        ctx.font = `900 ${fontPx}px ${UI_FONT}`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.lineJoin = 'round';
+                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.72)';
+                        ctx.strokeText(String(cell.adj), x + s / 2, y + s / 2 + 1);
+                        ctx.fillStyle = color;
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 6;
+                        ctx.fillText(String(cell.adj), x + s / 2, y + s / 2 + 1);
+                        ctx.restore();
+                    }
+                } else {
+                    ctx.save();
+                    ctx.fillStyle = isPressed ? '#2a3550' : '#1e273b';
+                    this.roundPath(ctx, x, y, s, s, radius);
+                    ctx.fill();
+
+                    // 입체감을 주는 상단 하이라이트
+                    ctx.fillStyle = isPressed ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.12)';
+                    this.roundPath(ctx, x + 1, y + 1, s - 2, Math.max(3, s * 0.24), Math.max(2, radius - 1));
+                    ctx.fill();
+
+                    ctx.strokeStyle = cell.flag
+                        ? 'rgba(245, 158, 11, 0.75)'
+                        : (isPressed ? 'rgba(56, 189, 248, 0.8)' : 'rgba(148, 163, 184, 0.28)');
+                    ctx.lineWidth = (cell.flag || isPressed) ? 1.5 : 1;
+                    this.roundPath(ctx, x, y, s, s, radius);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    if (cell.flag) {
+                        this.drawFlag(ctx, x, y, s);
+                        if (showMines && !cell.mine) {
+                            // 잘못 꽂은 깃발 X 표시
+                            ctx.save();
+                            ctx.strokeStyle = '#fb7185';
+                            ctx.lineWidth = 2.5;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(x + s * 0.22, y + s * 0.22);
+                            ctx.lineTo(x + s * 0.78, y + s * 0.78);
+                            ctx.moveTo(x + s * 0.78, y + s * 0.22);
+                            ctx.lineTo(x + s * 0.22, y + s * 0.78);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 const games = {
     slots: new Slots(),
     block: new BlockDrop(),
@@ -5609,14 +6458,17 @@ const games = {
     brick: new BrickBreaker(),
     puzzle: new Neon2048(),
     flappy: new FlappyNeon(),
-    tower: new NeonTower()
+    tower: new NeonTower(),
+    mines: new NeonMines()
 };
 
 let current = null;
 
 function refreshBests() {
     document.querySelectorAll('[data-best]').forEach(el => {
-        el.textContent = 'BEST ' + store.best(el.getAttribute('data-best'));
+        const id = el.getAttribute('data-best');
+        const v = store.best(id);
+        el.textContent = (id === 'mines' && v > 0) ? `BEST ${v}s` : ('BEST ' + v);
     });
 }
 
