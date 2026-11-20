@@ -1520,6 +1520,11 @@ canvas {
     transform: scale(0.98);
 }
 
+.tower-portal-item .portal-item-icon {
+    border-color: rgba(52, 211, 153, 0.45);
+    background: linear-gradient(145deg, rgba(52, 211, 153, 0.2), rgba(14, 165, 233, 0.08));
+}
+
 </style>
 </head>
 <body>
@@ -1628,6 +1633,20 @@ canvas {
                             <span class="portal-best-pill" data-best="shoot">BEST 0</span>
                         </span>
                         <span class="portal-item-desc">끌어서 피하고 자동으로 쏘는 슈팅</span>
+                    </span>
+                    <span class="portal-item-arrow">&#8594;</span>
+                </button>
+            </div>
+
+            <div class="portal-item tower-portal-item">
+                <button class="portal-item-main" data-go="tower" aria-label="타워 쌓기 · Neon Tower">
+                    <span class="portal-item-icon">🏗️</span>
+                    <span class="portal-item-texts">
+                        <span class="portal-item-title-row">
+                            <span class="portal-item-title">타워 쌓기</span>
+                            <span class="portal-best-pill" data-best="tower">BEST 0</span>
+                        </span>
+                        <span class="portal-item-desc">타이밍에 맞춰 네온 블록을 높이 쌓기</span>
                     </span>
                     <span class="portal-item-arrow">&#8594;</span>
                 </button>
@@ -1794,6 +1813,22 @@ canvas {
             <div class="overlay" data-overlay></div>
         </div>
         <p class="hint">화면 탭 / 스페이스 = 날아오르기 · Tap or Space to flap</p>
+    </section>
+
+    <!-- ===== 네온 타워 쌓기 ===== -->
+    <section id="scr-tower" class="screen hidden game-screen">
+        <div class="hud">
+            <button class="btn-back" data-back>&larr; 메뉴 · Menu</button>
+            <div class="hud-stats">
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-val" data-score>0</span></div>
+                <div class="stat"><span class="stat-label">Best</span><span class="stat-val" data-bestval>0</span></div>
+            </div>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="cv-tower"></canvas>
+            <div class="overlay" data-overlay></div>
+        </div>
+        <p class="hint">화면 탭 / 스페이스 = 블록 멈추기 · Tap or Space to drop</p>
     </section>
 
 </div>
@@ -5158,6 +5193,414 @@ class FlappyNeon extends Game {
 }
 
 
+/* ============================================================
+   8) Neon Tower — 네온 타워 쌓기
+   ============================================================ */
+
+class NeonTower extends Game {
+    constructor() {
+        super('tower', 'scr-tower', 'cv-tower');
+        this.titleEn = 'Neon Tower';
+        this.titleKr = '네온 타워 쌓기';
+        this.introHint = '오가는 블록을 타이밍에 맞춰 멈추고 높이 쌓으세요. 정확히 맞추면 PERFECT!<br>Tap to stop the sliding block and stack as high as you can.';
+        this._lastTouch = 0;
+    }
+
+    layerColor(idx) {
+        const hue = (190 + idx * 14) % 360;
+        return `hsl(${hue}, 95%, 60%)`;
+    }
+
+    blockSpeed(floor) {
+        const base = this.W * 0.44;
+        const cap = this.W * 1.15;
+        return Math.min(cap, base + floor * (this.W * 0.018));
+    }
+
+    screenY(worldTopY) {
+        return this.groundY - worldTopY + this.camY;
+    }
+
+    updateTargetCam() {
+        const topLayer = this.stack.length + 1;
+        const desiredTopY = this.H * 0.36;
+        this.targetCamY = Math.max(0, topLayer * this.blockH - (this.groundY - desiredTopY));
+    }
+
+    reset() {
+        this._lastW = this.W;
+        this.margin = 8;
+        this.blockH = Math.max(20, Math.min(28, Math.round(this.H * 0.044)));
+        this.baseW = Math.min(200, Math.round(this.W * 0.48));
+        this.groundY = this.H - 42;
+        this.camY = 0;
+        this.targetCamY = 0;
+        this.score = 0;
+        this.combo = 0;
+        this.bestAtStart = store.best(this.id);
+        this.falling = [];
+        this.waves = [];
+        this.particles = [];
+        this.shakeTime = 0;
+
+        // 0층 받침 블록
+        const baseX = (this.W - this.baseW) / 2;
+        this.stack = [{
+            x: baseX,
+            w: this.baseW,
+            worldTopY: this.blockH,
+            color: this.layerColor(0)
+        }];
+
+        this.spawnMovingBlock();
+        this.setStat('score', 0);
+        this.setStat('bestval', this.bestAtStart);
+    }
+
+    spawnMovingBlock() {
+        const prev = this.stack[this.stack.length - 1];
+        const idx = this.stack.length;
+        const w = prev.w;
+        const prevCenter = prev.x + prev.w / 2;
+        const fromLeft = prevCenter >= this.W / 2;
+        const x = fromLeft ? this.margin : Math.max(this.margin, this.W - this.margin - w);
+
+        this.cur = {
+            x,
+            w,
+            worldTopY: (idx + 1) * this.blockH,
+            dir: fromLeft ? 1 : -1,
+            speed: this.blockSpeed(idx - 1),
+            color: this.layerColor(idx)
+        };
+        this.updateTargetCam();
+    }
+
+    onResize() {
+        if (!this.stack || !this.stack.length) return;
+        const prevW = this._lastW || this.W;
+        const ratio = prevW > 0 ? this.W / prevW : 1;
+        this._lastW = this.W;
+
+        this.blockH = Math.max(20, Math.min(28, Math.round(this.H * 0.044)));
+        this.baseW = Math.min(200, Math.round(this.W * 0.48));
+        this.groundY = this.H - 42;
+
+        this.stack.forEach((b, i) => {
+            b.x *= ratio;
+            b.w *= ratio;
+            b.worldTopY = (i + 1) * this.blockH;
+        });
+        if (this.cur) {
+            this.cur.x = Math.max(this.margin, Math.min(this.W - this.margin - this.cur.w * ratio, this.cur.x * ratio));
+            this.cur.w *= ratio;
+            this.cur.worldTopY = (this.stack.length + 1) * this.blockH;
+            this.cur.speed = this.blockSpeed(this.score);
+        }
+        this.falling.forEach(f => {
+            f.x *= ratio;
+            f.w *= ratio;
+        });
+        this.updateTargetCam();
+        this.camY = this.targetCamY;
+    }
+
+    exit() {
+        if (!this.over && this.score > 0) store.setBest(this.id, this.score);
+        super.exit();
+    }
+
+    bindInput() {
+        const onPress = (e) => {
+            if (!this.running || this.over) return;
+            if (e.target && e.target.closest('button, [data-overlay]')) return;
+            if (e.type === 'touchstart') {
+                this._lastTouch = performance.now();
+                e.preventDefault();
+            } else if (e.type === 'mousedown' && performance.now() - this._lastTouch < 400) {
+                return;
+            }
+            sfx.init();
+            this.drop();
+        };
+
+        this.on(this.screen, 'touchstart', onPress, { passive: false });
+        this.on(this.screen, 'mousedown', onPress);
+        this.on(window, 'keydown', (e) => {
+            if (!this.running || this.over || e.repeat) return;
+            if (e.key === ' ' || e.key === 'ArrowDown' || e.key === 'Enter') {
+                e.preventDefault();
+                sfx.init();
+                this.drop();
+            }
+        });
+    }
+
+    drop() {
+        if (!this.running || this.over || !this.cur) return;
+        const cur = this.cur;
+        const prev = this.stack[this.stack.length - 1];
+        const sy = this.screenY(cur.worldTopY);
+
+        const ovLeft = Math.max(cur.x, prev.x);
+        const ovRight = Math.min(cur.x + cur.w, prev.x + prev.w);
+        const ovW = ovRight - ovLeft;
+
+        // 전혀 겹치지 않으면 게임 끝
+        if (ovW <= 0) {
+            this.falling.push({
+                x: cur.x,
+                y: sy,
+                w: cur.w,
+                h: this.blockH,
+                color: cur.color,
+                vx: cur.dir * 55,
+                vy: -20,
+                rot: 0,
+                vrot: cur.dir * 2.2,
+                alpha: 1
+            });
+            this.cur = null;
+            this.triggerShake(8, 0.25);
+            this.addSpark(cur.x + cur.w / 2, sy + this.blockH / 2, '#ff4d6d', 22, 5);
+            sfx.hit();
+            this.draw();
+            this.gameOver();
+            return;
+        }
+
+        // 화면 폭에 비례하는 PERFECT 허용 오차 (약 4px 기준)
+        const tol = Math.max(3.5, Math.min(7, this.W * 0.011));
+        const isPerfect = Math.abs(cur.x - prev.x) <= tol;
+
+        let placedX = ovLeft;
+        let placedW = ovW;
+
+        if (isPerfect) {
+            this.combo += 1;
+            placedX = prev.x;
+            placedW = prev.w;
+
+            // 연속 PERFECT 3회 이상이면 폭이 조금 회복된다 (초기 폭 상한)
+            let grew = false;
+            if (this.combo >= 3 && placedW < this.baseW) {
+                const grow = Math.max(6, Math.round(this.baseW * 0.08));
+                const nextW = Math.min(this.baseW, placedW + grow);
+                const diff = nextW - placedW;
+                placedX = Math.max(this.margin, Math.min(this.W - this.margin - nextW, placedX - diff / 2));
+                placedW = nextW;
+                grew = true;
+            }
+
+            const cx = placedX + placedW / 2;
+            const label = grew
+                ? `PERFECT x${this.combo} +폭 회복!`
+                : (this.combo > 1 ? `PERFECT x${this.combo}!` : 'PERFECT!');
+            this.waves.push({
+                x: placedX,
+                worldTopY: cur.worldTopY,
+                w: placedW,
+                h: this.blockH,
+                color: '#ffd700',
+                expand: 0,
+                alpha: 1
+            });
+            this.addPopupText(label, cx, sy - 10, '#ffd700');
+            this.addSpark(cx, sy + this.blockH / 2, '#ffd700', 18, 4.5);
+            sfx.blip(Math.min(1320, 660 + this.combo * 70), 0.09, 'triangle', 0.06);
+            vibe(20);
+        } else {
+            this.combo = 0;
+
+            // 어긋난 부분은 잘려 떨어진다
+            const cutOnLeft = cur.x < prev.x;
+            const cutX = cutOnLeft ? cur.x : prev.x + prev.w;
+            const cutW = cur.w - ovW;
+            if (cutW > 0.5) {
+                const side = cutOnLeft ? -1 : 1;
+                this.falling.push({
+                    x: cutX,
+                    y: sy,
+                    w: cutW,
+                    h: this.blockH,
+                    color: cur.color,
+                    vx: side * (45 + Math.random() * 35),
+                    vy: -35,
+                    rot: 0,
+                    vrot: side * (1.8 + Math.random() * 1.4),
+                    alpha: 1
+                });
+                this.addSpark(cutOnLeft ? prev.x : prev.x + prev.w, sy + this.blockH / 2, cur.color, 10, 3);
+            }
+            sfx.good();
+            vibe(12);
+        }
+
+        this.stack.push({
+            x: placedX,
+            w: placedW,
+            worldTopY: cur.worldTopY,
+            color: cur.color
+        });
+
+        this.score += 1;
+        this.setStat('score', this.score);
+        this.setStat('bestval', Math.max(this.bestAtStart, this.score));
+        this.spawnMovingBlock();
+    }
+
+    update(dt) {
+        this.updateFx(dt);
+
+        // 카메라 부드럽게 따라 올라감 (dt 기준)
+        this.camY += (this.targetCamY - this.camY) * Math.min(1, dt * 8);
+
+        // 이동 중인 블록 (dt 기준)
+        if (this.cur) {
+            this.cur.x += this.cur.dir * this.cur.speed * dt;
+            const minX = this.margin;
+            const maxX = Math.max(minX, this.W - this.margin - this.cur.w);
+            if (this.cur.x <= minX) {
+                this.cur.x = minX;
+                this.cur.dir = 1;
+            } else if (this.cur.x >= maxX) {
+                this.cur.x = maxX;
+                this.cur.dir = -1;
+            }
+        }
+
+        // 잘려 떨어지는 조각 물리 (dt 기준)
+        const gravity = 980;
+        for (let i = this.falling.length - 1; i >= 0; i--) {
+            const f = this.falling[i];
+            f.vy += gravity * dt;
+            f.x += f.vx * dt;
+            f.y += f.vy * dt;
+            f.rot += f.vrot * dt;
+            f.alpha -= 0.9 * dt;
+            if (f.alpha <= 0 || f.y > this.H + 100) {
+                this.falling.splice(i, 1);
+            }
+        }
+
+        // PERFECT 파동 이펙트 (dt 기준)
+        for (let i = this.waves.length - 1; i >= 0; i--) {
+            const w = this.waves[i];
+            w.expand += 70 * dt;
+            w.alpha -= 2.2 * dt;
+            if (w.alpha <= 0) this.waves.splice(i, 1);
+        }
+    }
+
+    drawBlock(ctx, x, y, w, h, color, glow = 10) {
+        neonRect(ctx, x, y, w, h, color, 4, glow);
+        // 상단 하이라이트 라인으로 층 구분을 또렷하게
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.fillRect(x + 2, y + 1, Math.max(0, w - 4), 2.5);
+        ctx.restore();
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.fillStyle = HOT.pick('#080912', '#14080e');
+        ctx.fillRect(0, 0, this.W, this.H);
+
+        this.beginFrame(ctx);
+
+        // 배경 높이 그리드 (카메라에 맞춰 스크롤)
+        ctx.save();
+        const startFloor = Math.max(5, Math.floor((this.camY / this.blockH) / 5) * 5);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.font = '700 11px ' + UI_FONT;
+        ctx.textAlign = 'right';
+        for (let fl = startFloor; fl < startFloor + 30; fl += 5) {
+            const gy = this.screenY((fl + 1) * this.blockH);
+            if (gy < -20 || gy > this.H + 20) continue;
+            ctx.beginPath();
+            ctx.moveTo(12, gy);
+            ctx.lineTo(this.W - 12, gy);
+            ctx.stroke();
+            ctx.fillText(fl + 'F', this.W - 14, gy - 4);
+        }
+
+        // 바닥 플랫폼 라인 (화면 안에 보일 때만)
+        const baseFloorY = this.groundY + this.camY;
+        if (baseFloorY < this.H + 20) {
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(16, baseFloorY + 2);
+            ctx.lineTo(this.W - 16, baseFloorY + 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // 쌓인 타워 블록 렌더링 (화면 밖 아래층은 생략)
+        for (let i = 0; i < this.stack.length; i++) {
+            const b = this.stack[i];
+            const sy = this.screenY(b.worldTopY);
+            if (sy > this.H + this.blockH || sy + this.blockH < -this.blockH) continue;
+            this.drawBlock(ctx, b.x, sy, b.w, this.blockH - 1.5, b.color, i === this.stack.length - 1 ? 12 : 6);
+        }
+
+        // PERFECT 파동
+        for (const w of this.waves) {
+            const sy = this.screenY(w.worldTopY);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, w.alpha);
+            ctx.strokeStyle = w.color;
+            ctx.shadowColor = w.color;
+            ctx.shadowBlur = 14;
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(w.x - w.expand, sy - w.expand * 0.25, w.w + w.expand * 2, w.h + w.expand * 0.5);
+            ctx.restore();
+        }
+
+        // 잘려 떨어지는 조각
+        for (const f of this.falling) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, f.alpha);
+            ctx.translate(f.x + f.w / 2, f.y + f.h / 2);
+            ctx.rotate(f.rot);
+            neonRect(ctx, -f.w / 2, -f.h / 2, f.w, f.h - 1.5, f.color, 3, 8);
+            ctx.restore();
+        }
+
+        // 좌우로 이동 중인 현재 블록
+        if (this.cur) {
+            const sy = this.screenY(this.cur.worldTopY);
+            this.drawBlock(ctx, this.cur.x, sy, this.cur.w, this.blockH - 1.5, this.cur.color, 14);
+        }
+
+        // 연속 PERFECT 콤보 표시
+        if (this.running && this.combo >= 2) {
+            ctx.save();
+            ctx.fillStyle = '#ffd700';
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 10;
+            ctx.font = '800 13px ' + UI_FONT;
+            ctx.textAlign = 'center';
+            ctx.fillText(`PERFECT COMBO x${this.combo}`, this.W / 2, 26);
+            ctx.restore();
+        }
+
+        // 첫 블록 안내
+        if (this.running && this.score === 0) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(248, 250, 252, 0.85)';
+            ctx.font = '700 14px ' + UI_FONT;
+            ctx.textAlign = 'center';
+            ctx.fillText('화면을 눌러 블록을 얹으세요 · Tap to Drop', this.W / 2, this.H * 0.22);
+            ctx.restore();
+        }
+
+        this.endFrame(ctx);
+    }
+}
+
+
 const games = {
     slots: new Slots(),
     block: new BlockDrop(),
@@ -5165,7 +5608,8 @@ const games = {
     snake: new Snake(),
     brick: new BrickBreaker(),
     puzzle: new Neon2048(),
-    flappy: new FlappyNeon()
+    flappy: new FlappyNeon(),
+    tower: new NeonTower()
 };
 
 let current = null;
