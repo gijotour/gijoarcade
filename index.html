@@ -1692,6 +1692,69 @@ canvas {
     width: 100%; min-height: 48px; border-radius: 14px; border: 0; cursor: pointer;
     background: #f8fafc; color: #0a0a0c; font: 800 0.95rem/1 inherit; font-family: inherit;
 }
+
+/* ===== 게임 화면 정리 ===== */
+.btn-back {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.hint,
+.mines-hint,
+.memory-hint,
+.pop-hint {
+    font-size: 0.82rem;
+    line-height: 1.38;
+    padding: 0 12px 10px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.ov-title {
+    font-size: clamp(1.55rem, 7.2vw, 2.1rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    word-break: keep-all;
+}
+
+.ov-en {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+}
+
+.ov-kr {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1.4;
+    word-break: keep-all;
+}
+
+.ov-btn {
+    min-height: 52px;
+    min-width: 220px;
+    max-width: 100%;
+    padding: 14px 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.02rem;
+    line-height: 1.15;
+}
 </style>
 </head>
 <body>
@@ -1938,7 +2001,7 @@ canvas {
             <canvas id="cv-block"></canvas>
             <div class="overlay" data-overlay></div>
         </div>
-        <p class="hint">좌우 밀기 = 이동 · 탭 = 회전 · 아래로 쓸기 = 빠른 낙하<br>Drag = move · Tap = rotate · Swipe down = drop</p>
+        <p class="hint">좌우 밀기 이동 · 탭 회전 · 아래로 쓸기 낙하<br>Drag move · Tap rotate · Swipe drop</p>
     </section>
 
     <!-- ===== 비행기 슈팅 ===== -->
@@ -1971,7 +2034,7 @@ canvas {
             <canvas id="cv-snake"></canvas>
             <div class="overlay" data-overlay></div>
         </div>
-        <p class="hint">쓸어서 방향 전환 · 길게 누르면 질주 · 벽과 몸에 닿으면 끝<br>Swipe to turn · Hold to boost · Avoid walls and yourself</p>
+        <p class="hint">쓸어서 방향 전환 · 길게 누르면 질주<br>Swipe to turn · Hold to boost</p>
     </section>
 
     <!-- ===== 벽돌 깨기 ===== -->
@@ -2073,7 +2136,7 @@ canvas {
             <canvas id="cv-memory"></canvas>
             <div class="overlay" data-overlay></div>
         </div>
-        <p class="hint memory-hint">반짝이는 순서를 기억해 같은 순서로 누르세요 · Watch &amp; repeat the neon pattern</p>
+        <p class="hint memory-hint">반짝이는 순서를 기억해 따라 누르세요<br>Watch &amp; repeat the neon pattern</p>
     </section>
 
     <!-- ===== 네온 컬러 팝 ===== -->
@@ -2090,7 +2153,7 @@ canvas {
             <canvas id="cv-pop"></canvas>
             <div class="overlay" data-overlay></div>
         </div>
-        <p class="hint pop-hint">같은 색 2개 이상 탭 = 제거 · 빈 줄은 왼쪽 정렬 · 0개 보너스 +500<br>Tap 2+ matching tiles to pop · Clear all for +500 bonus</p>
+        <p class="hint pop-hint">같은 색 2개+ 탭 제거 · 모두 제거 +500<br>Tap 2+ matching tiles · Clear all +500</p>
     </section>
 
 </div>
@@ -2380,8 +2443,8 @@ class Game {
         this.setStat('bestval', store.best(this.id));
         const tease = '';
         this.showOverlay(`
-            <div class="ov-title">${this.titleEn}</div>
-            <div class="ov-kr">${this.titleKr}</div>
+            <div class="ov-title">${this.titleKr}</div>
+            <div class="ov-en">${this.titleEn}</div>
             <div class="ov-best">BEST ${store.best(this.id)}</div>
             ${tease}
             <button class="ov-btn">시작 · Start</button>
@@ -4903,7 +4966,7 @@ class Neon2048 extends Game {
     constructor() {
         super('puzzle', 'scr-puzzle', 'cv-puzzle');
         this.titleEn = 'GIJO Neon 2048';
-        this.titleKr = '네온 2048 머지';
+        this.titleKr = '2048 퍼즐';
         this.introHint = '상하좌우로 쓸어 같은 숫자를 합치세요. 2048을 완성하면 승리!<br>Swipe in 4 directions to merge matching numbers. Reach 2048 to win!';
     }
 
@@ -5163,7 +5226,7 @@ class FlappyNeon extends Game {
     constructor() {
         super('flappy', 'scr-flappy', 'cv-flappy');
         this.titleEn = 'GIJO Flappy Neon';
-        this.titleKr = '플래피 네온';
+        this.titleKr = '플래피 비행';
         this.introHint = '화면을 탭해서 날아오르세요. 레이저 파이프를 피하세요!<br>Tap to flap your wings. Avoid the electric laser pipes!';
     }
 
@@ -5463,7 +5526,7 @@ class NeonTower extends Game {
     constructor() {
         super('tower', 'scr-tower', 'cv-tower');
         this.titleEn = 'Neon Tower';
-        this.titleKr = '네온 타워 쌓기';
+        this.titleKr = '타워 쌓기';
         this.introHint = '오가는 블록을 타이밍에 맞춰 멈추고 높이 쌓으세요. 정확히 맞추면 PERFECT!<br>Tap to stop the sliding block and stack as high as you can.';
         this._lastTouch = 0;
     }
@@ -5886,7 +5949,7 @@ class NeonMines extends Game {
     constructor() {
         super('mines', 'scr-mines', 'cv-mines');
         this.titleEn = 'Neon Mines';
-        this.titleKr = '네온 지뢰찾기';
+        this.titleKr = '지뢰찾기';
         this.introHint = '첫 탭과 주변 8칸은 안전합니다. 숫자를 단서로 16개 지뢰를 피해 모든 칸을 여세요.<br>First tap is safe. Clear every safe tile avoiding 16 mines.';
         this._lastTouch = 0;
         this.elapsedTimer = null;
@@ -5970,8 +6033,8 @@ class NeonMines extends Game {
         this.setStat('bestval', this.formatBest(best));
         this.syncFlagBtn();
         this.showOverlay(`
-            <div class="ov-title">${this.titleEn}</div>
-            <div class="ov-kr">${this.titleKr}</div>
+            <div class="ov-title">${this.titleKr}</div>
+            <div class="ov-en">${this.titleEn}</div>
             <div class="ov-best">BEST ${this.formatBest(best)}</div>
             <button class="ov-btn">시작 · Start</button>
             <p class="ov-hint">${this.introHint}</p>
@@ -6621,7 +6684,7 @@ class NeonMemory extends Game {
     constructor() {
         super('memory', 'scr-memory', 'cv-memory');
         this.titleEn = 'Neon Memory';
-        this.titleKr = '패턴 기억 릴레이';
+        this.titleKr = '패턴 기억';
         this.introHint = '네온 패드(▲ ● ■ ◆)가 반짝이는 순서를 기억해 똑같이 누르세요.<br>Watch the glowing pads and repeat the exact sequence.';
         this._lastTouch = 0;
         this._timers = new Set();
@@ -7201,7 +7264,7 @@ class NeonPop extends Game {
     constructor() {
         super('pop', 'scr-pop', 'cv-pop');
         this.titleEn = 'Neon Pop';
-        this.titleKr = '네온 컬러 팝';
+        this.titleKr = '컬러 팝';
         this.introHint = '상하좌우로 이어진 같은 색 타일(● ▲ ■ ◆) 2개 이상을 탭해 지우세요. 한 번에 많이 지울수록 높은 점수! 모두 지우면 +500점.<br>Tap 2+ matching tiles to pop. Bigger groups score n×(n−1). Clear all tiles for +500 bonus.';
         this._lastTouch = 0;
         this.grid = [];
