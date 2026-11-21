@@ -13,6 +13,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GIJO Arcade">
     <meta name="theme-color" content="#0a0a0c">
+    <script>
+    /* 카지노 화면(?mode=casino)에서는 설치 정보를 GIJO Casino 로 바꾼다 — 홈 화면에 따로 추가되도록.
+       아케이드와 카지노는 같은 파일이고, 매니페스트·아이콘·이름만 다르다. */
+    window.gijoInstallIdentity = function (casino) {
+        var set = function (sel, attr, val) { var el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+        set('link[rel="manifest"]', 'href', casino ? 'manifest-casino.json' : 'manifest.json');
+        set('link[rel="icon"]', 'href', casino ? 'casino-192.png' : 'icon-192.png');
+        set('link[rel="apple-touch-icon"]', 'href', casino ? 'casino-180.png' : 'icon-180.png');
+        set('meta[name="apple-mobile-web-app-title"]', 'content', casino ? 'GIJO Casino' : 'GIJO Arcade');
+    };
+    if (/[?&]mode=casino(&|$)/.test(location.search) || location.hash === '#casino') window.gijoInstallIdentity(true);
+    </script>
     <!-- 파티 게임(gijo-drink.html)과 같은 이유로 폰트를 렌더링 차단 없이 받습니다.
          현지 데이터가 느려 폰트 요청이 걸려도 게임은 그대로 실행돼야 합니다. -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap"
@@ -23701,6 +23713,8 @@ function setCasinoMode(on) {
         ? '← 아케이드 게임 <small>Arcade</small>'
         : '🃏 카지노 룰 연습 <small>Casino Rules →</small>';
     document.title = on ? 'GIJO Casino' : 'GIJO Arcade';
+    if (window.gijoInstallIdentity) window.gijoInstallIdentity(on);
+    window.dispatchEvent(new Event('gijo-mode-change'));
     const portal = document.querySelector('.arcade-portal');
     if (portal) portal.scrollTop = 0;
 }
@@ -23756,7 +23770,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     sheet.setAttribute('aria-modal', 'true');
     sheet.innerHTML =
         '<div class="gijo-install-card">' +
-        '<div class="gijo-install-head"><img src="icon-192.png" alt=""><div>' +
+        '<div class="gijo-install-head"><img class="gijo-install-icon" src="icon-192.png" alt=""><div>' +
         '<div class="gijo-install-title">GIJO Arcade 홈 화면에 추가</div>' +
         '<div class="gijo-install-sub">Add to Home Screen</div></div></div>' +
         '<ol class="gijo-install-steps">' + steps + '</ol>' +
@@ -23768,7 +23782,18 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     sheet.addEventListener('click', function (e) { if (e.target === sheet) closeSheet(); });
     sheet.querySelector('.gijo-install-close').addEventListener('click', closeSheet);
 
+    // 아케이드와 카지노는 따로 설치된다. 지금 보고 있는 쪽 이름과 아이콘으로 안내한다.
+    var paint = function () {
+        var casino = document.body.classList.contains('mode-casino');
+        sheet.querySelector('.gijo-install-icon').src = casino ? 'casino-192.png' : 'icon-192.png';
+        sheet.querySelector('.gijo-install-title').textContent = (casino ? 'GIJO Casino' : 'GIJO Arcade') + ' 홈 화면에 추가';
+        btn.textContent = casino ? '📲 카지노 설치' : '📲 설치';
+    };
+    paint();
+
     var deferred = null;
+    // 화면을 바꾸면 앞서 받아 둔 설치 창은 다른 쪽 것이므로 버린다(브라우저가 새로 알려 준다).
+    window.addEventListener('gijo-mode-change', function () { deferred = null; paint(); });
     window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; });
     window.addEventListener('appinstalled', function () { deferred = null; btn.classList.remove('gijo-install-show'); closeSheet(); });
     btn.addEventListener('click', function () {
