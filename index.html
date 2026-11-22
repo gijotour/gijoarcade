@@ -18156,7 +18156,7 @@ class RouletteTable {
             const parity = (winner % 2 === 1) ? '홀' : '짝';
             const range = (winner <= 18) ? '낮은 수' : '높은 수';
             const dozen = winner <= 12 ? '1~12' : (winner <= 24 ? '13~24' : '25~36');
-            head = `${winner} ${info.sym} ${info.kr} · ${parity} · ${range} (${dozen})`;
+            head = `${winner} ${info.sym} ${info.kr} · ${parity} · ${range} · ${dozen} 묶음`;
         }
 
         const netStr = net > 0 ? `+${net}` : (net < 0 ? `−${Math.abs(net)}` : '0');
@@ -19504,8 +19504,8 @@ function tcStrategyAdvice(cards, canPlay) {
     const bonusMult = tcAnteBonusMult(ev);
     const actKr = shouldPlay ? '플레이' : '폴드';
     const actEn = shouldPlay ? 'Play' : 'Fold';
-    const reasonKr = shouldPlay ? 'Q-6-4 이상' : 'Q-6-4 미만';
-    const reasonEn = shouldPlay ? 'Q-6-4 or better' : 'below Q-6-4';
+    const reasonKr = shouldPlay ? 'Q-⁠6-⁠4 이상' : 'Q-⁠6-⁠4 미만';
+    const reasonEn = shouldPlay ? 'Q-⁠6-⁠4 or better' : 'below Q-⁠6-⁠4';
 
     let kr = `내 패 ${ev.cardsText} (${ev.name}) → 기본 전략은 ${actKr} (${reasonKr})`;
     let en = `Your ${ev.cardsText} (${ev.nameEn}) — Basic strategy: ${actEn} (${reasonEn})`;
@@ -22971,9 +22971,9 @@ class BigWheel {
             if (def.key === winnerKey) {
                 const profit = stake * def.mult;
                 totalReturn += stake + profit;
-                parts.unshift(`${def.kr} 에 건 ${stake} 은 ${def.mult}배 +${profit}`);
+                parts.unshift(`${def.kr}에 건 ${stake}은 ${def.mult}배 +${profit}`);
             } else {
-                parts.push(`${def.kr} 에 건 ${stake} 은 −${stake}`);
+                parts.push(`${def.kr}에 건 ${stake}은 −${stake}`);
             }
         }
 
@@ -22992,7 +22992,7 @@ class BigWheel {
 
         const net = totalReturn - totalBet;
         const netStr = net > 0 ? `+${net}` : (net < 0 ? `−${Math.abs(net)}` : '0');
-        const head = `${winDef.kr} 에 멈춤 · ${winDef.mult}배 (${winDef.count}/54칸)`;
+        const head = `${winDef.kr}에 멈춤 ·${winDef.mult}배 (${winDef.count}/54칸)`;
         const detail = `→ ${parts.join(', ')} (합계 ${netStr})`;
         const tone = net > 0 ? 'win' : (net < 0 ? 'lose' : 'even');
 
