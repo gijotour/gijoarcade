@@ -3,7 +3,7 @@
 // · 화면(index.html)은 인터넷이 되면 새 것을 받아 캐시를 갱신하고, 안 되면 캐시로 연다.
 //   그래서 게임을 고쳐 올려도 VERSION 을 올리지 않아도 다음 접속 때 새 판이 뜬다.
 // · 그림·아이콘·글꼴은 한 번 받은 것을 계속 쓴다. 그림 파일을 같은 이름으로 바꿔 올렸다면 VERSION 을 올린다.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'gijoarcade-' + VERSION;
 const BASE = new URL('./', self.location.href).pathname; // GitHub Pages 는 /<저장소이름>/ 아래에서 열린다
 const PRECACHE = [
@@ -19,9 +19,7 @@ const PRECACHE = [
   "icon-512.png",
   "assets/slot_spicy_bonus_ultra.jpg",
   "assets/slot_jackpot_fever_ultra.jpg",
-  "assets/slot_double_gamble_ultra.jpg",
-  "assets/space_shooter_fun_art.jpg",
-  "assets/brick_breaker_fun_art.jpg"
+  "assets/slot_double_gamble_ultra.jpg"
 ].map((p) => BASE + p);
 const isFont = (url) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 
