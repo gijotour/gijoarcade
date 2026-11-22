@@ -19504,8 +19504,8 @@ function tcStrategyAdvice(cards, canPlay) {
     const bonusMult = tcAnteBonusMult(ev);
     const actKr = shouldPlay ? '플레이' : '폴드';
     const actEn = shouldPlay ? 'Play' : 'Fold';
-    const reasonKr = shouldPlay ? 'Q-⁠6-⁠4 이상' : 'Q-⁠6-⁠4 미만';
-    const reasonEn = shouldPlay ? 'Q-⁠6-⁠4 or better' : 'below Q-⁠6-⁠4';
+    const reasonKr = shouldPlay ? 'Q-\u20606-\u20604 이상' : 'Q-\u20606-\u20604 미만';
+    const reasonEn = shouldPlay ? 'Q-\u20606-\u20604 or better' : 'below Q-\u20606-\u20604';
 
     let kr = `내 패 ${ev.cardsText} (${ev.name}) → 기본 전략은 ${actKr} (${reasonKr})`;
     let en = `Your ${ev.cardsText} (${ev.nameEn}) — Basic strategy: ${actEn} (${reasonEn})`;
