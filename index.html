@@ -3848,7 +3848,7 @@ body.hot .slots-jackpot-topper {
 }
 
 .rt-num-btn {
-    min-height: 44px;
+    min-height: 40px;
     padding: 3px 2px;
     line-height: 1;
 }
@@ -3895,6 +3895,18 @@ body.hot .slots-jackpot-topper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px;
+}
+
+.rt-out-row-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+.rt-out-row-4 .rt-out-btn {
+    padding-left: 2px;
+    padding-right: 2px;
+    white-space: nowrap;
 }
 
 .rt-out-btn {
@@ -9819,8 +9831,8 @@ body.mode-casino .pi-casino .portal-item-main { border-color: rgba(232, 201, 122
             </div>
 
             <div class="tc-center" id="tc-center" aria-live="polite">
-                <div class="tc-msg-main" id="tc-msg-main">앤티를 고르고 딜을 누르세요</div>
-                <div class="tc-msg-sub" id="tc-msg-sub">Choose your Ante and press Deal · 딜러 자격 Q 하이 이상</div>
+                <div class="tc-msg-main" id="tc-msg-main">앤티를 고르고 딜을 누르세요 · 딜러 자격 Q 하이 이상</div>
+                <div class="tc-msg-sub" id="tc-msg-sub">Choose your Ante and press Deal · Dealer needs Q-high or better</div>
             </div>
 
             <div class="tc-zone">
@@ -10058,8 +10070,8 @@ body.mode-casino .pi-casino .portal-item-main { border-color: rgba(232, 201, 122
             </div>
 
             <div class="he-msg-box" id="he-msg-box" aria-live="polite">
-                <div class="he-msg-main" id="he-msg-main">앤티를 고르고 딜을 누르세요</div>
-                <div class="he-msg-sub" id="he-msg-sub">Choose your Ante and press Deal · 딜러 자격 4 원 페어 이상</div>
+                <div class="he-msg-main" id="he-msg-main">앤티를 고르고 딜을 누르세요 · 딜러 자격 4 원 페어 이상</div>
+                <div class="he-msg-sub" id="he-msg-sub">Choose your Ante and press Deal · Dealer needs a pair of 4s or better</div>
             </div>
 
             <div class="he-zone he-player-zone">
@@ -17784,8 +17796,7 @@ class RouletteTable {
 
         html += '<div class="rt-out-group">';
         html += '<div class="rt-out-row-3">' + RT_OUTSIDE_DEFS.filter(d => d.row === 'dozens').map(mkOutside).join('') + '</div>';
-        html += '<div class="rt-out-row-2">' + RT_OUTSIDE_DEFS.filter(d => d.row === 'color').map(mkOutside).join('') + '</div>';
-        html += '<div class="rt-out-row-2">' + RT_OUTSIDE_DEFS.filter(d => d.row === 'parity').map(mkOutside).join('') + '</div>';
+        html += '<div class="rt-out-row-4">' + RT_OUTSIDE_DEFS.filter(d => d.row === 'color' || d.row === 'parity').map(mkOutside).join('') + '</div>';
         html += '<div class="rt-out-row-2">' + RT_OUTSIDE_DEFS.filter(d => d.row === 'range').map(mkOutside).join('') + '</div>';
         html += '</div>';
 
@@ -19635,7 +19646,7 @@ class ThreeCardPoker {
         if (this.chips < this.selectedAnte) {
             this.setCenterMsg('칩이 앤티보다 적어요 · 칩을 다시 받으세요', 'Not enough chips for this Ante — refill for free', 'push');
         } else {
-            this.setCenterMsg('앤티를 고르고 딜을 누르세요', 'Choose your Ante and press Deal · 딜러 자격 Q 하이 이상', '');
+            this.setCenterMsg('앤티를 고르고 딜을 누르세요 · 딜러 자격 Q 하이 이상', 'Choose your Ante and press Deal · Dealer needs Q-high or better', '');
         }
     }
 
@@ -21920,7 +21931,7 @@ class CasinoHoldem {
         if (this.chips < this.selectedAnte) {
             this.setMsg('칩이 앤티보다 적어요 · 칩을 다시 받으세요', 'Not enough chips for this Ante — refill for free', 'push');
         } else {
-            this.setMsg('앤티를 고르고 딜을 누르세요', 'Choose your Ante and press Deal · 딜러 자격 4 원 페어 이상', '');
+            this.setMsg('앤티를 고르고 딜을 누르세요 · 딜러 자격 4 원 페어 이상', 'Choose your Ante and press Deal · Dealer needs a pair of 4s or better', '');
         }
     }
 
